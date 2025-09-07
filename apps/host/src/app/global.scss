@@ -14,6 +14,41 @@ body {
   margin: 0;
 }
 
+.wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.title {
+  margin: 0 0 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.slot {
+  border: 1px solid rgba(229, 231, 235, 1);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.slot__hdr {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: rgba(107, 114, 128, 1);
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 h1,
 h2,
 p,
