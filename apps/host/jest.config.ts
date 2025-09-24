@@ -9,7 +9,7 @@ const config: Config = {
   displayName: 'host',
   preset: '../../jest.preset.js',
   transform: {
-    '^(?!.*\\.(js|jsx|ts|tsx|css||scss|json)$)': '@nx/react/plugins/jest',
+    '^(?!.*\\.(js|jsx|ts|tsx|css|scss|json)$)': '@nx/react/plugins/jest',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   coverageDirectory: '../../coverage/host',

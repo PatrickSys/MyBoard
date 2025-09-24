@@ -1,0 +1,19 @@
+{
+  "name": "@myboard/mb-pomodoro",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "root": "packages/mb-pomodoro",
+  "sourceRoot": "packages/mb-pomodoro/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vite build",
+        "cwd": "packages/mb-pomodoro"
+      },
+      "outputs": [
+        "{projectRoot}/dist"
+      ]
+    }
+  }
+}

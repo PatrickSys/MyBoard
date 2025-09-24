@@ -13,10 +13,10 @@ export const WIDGETS: ReadonlyArray<WidgetConfigEntry> = [
     url: '/widgets/mb-notes.js',
   },
   {
-    id: 'timer',
+    id: 'pomodoro',
     title: 'Pomodoro',
-    tag: 'mb-timer',
-    url: '/widgets/mb-timer.js',
+    tag: 'mb-pomodoro',
+    url: '/widgets/mb-pomodoro.js',
   },
 ];
 

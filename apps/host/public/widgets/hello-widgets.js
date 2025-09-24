@@ -7,7 +7,7 @@ class HelloNotes extends HTMLElement {
   }
 }
 
-class HelloTimer extends HTMLElement {
+class HelloPomodoro extends HTMLElement {
   connectedCallback() {
     const root = this.attachShadow({ mode: 'open' });
     root.innerHTML = `<div>Pomodoro (demo)</div>`;
@@ -18,8 +18,8 @@ class HelloTimer extends HTMLElement {
 if (!customElements.get('hello-notes')) {
   customElements.define('hello-notes', HelloNotes);
 }
-if (!customElements.get('hello-timer')) {
-  customElements.define('hello-timer', HelloTimer);
+if (!customElements.get('hello-pomodoro')) {
+  customElements.define('hello-pomodoro', HelloPomodoro);
 }
 
 

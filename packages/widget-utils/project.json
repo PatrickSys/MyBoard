@@ -1,0 +1,7 @@
+{
+  "name": "@myboard/widget-utils",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "root": "packages/widget-utils",
+  "sourceRoot": "packages/widget-utils/src",
+  "projectType": "library"
+}

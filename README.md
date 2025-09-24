@@ -63,7 +63,7 @@ pnpm nx test host
 
 ## Widgets and lazy-loading
 
-- Demo widgets live under `apps/host/public/widgets/hello-widgets.js` and register `hello-notes` and `hello-timer`.
+- Demo widgets live under `apps/host/public/widgets/hello-widgets.js` and register `hello-notes` and `hello-pomodoro`.
 - The host lazy-loads widget scripts with a small loader that dedupes by URL and times out after 10s.
 - To add a new widget in v0.1, extend `apps/host/src/config/widgets.ts` with `{ id, title, tag, url }` and ensure the script registers the tag.
 
