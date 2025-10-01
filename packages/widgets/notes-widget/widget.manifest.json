@@ -1,0 +1,55 @@
+{
+  "id": "notes-widget",
+  "name": "Notes Widget",
+  "version": "1.0.0",
+  "description": "A simple note-taking widget with real-time sync",
+  "author": "MyBoard",
+  "homepage": "https://myboard.dev/widgets/notes",
+  "license": "MIT",
+  "keywords": ["notes", "productivity", "text"],
+  
+  "entry": "./dist/index.js",
+  "framework": "vanilla",
+  "dependencies": {},
+  
+  "category": "productivity",
+  "icon": "📝",
+  "screenshots": [],
+  "defaultSize": {
+    "width": 300,
+    "height": 400,
+    "minWidth": 250,
+    "minHeight": 200
+  },
+  
+  "permissions": {
+    "storage": true,
+    "network": false,
+    "notifications": true,
+    "clipboard": true
+  },
+  "capabilities": ["text-editing", "auto-save", "search"],
+  
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "theme": {
+        "type": "object",
+        "properties": {
+          "primaryColor": { "type": "string", "default": "#007bff" },
+          "backgroundColor": { "type": "string", "default": "#ffffff" },
+          "textColor": { "type": "string", "default": "#333333" }
+        }
+      },
+      "autoSave": {
+        "type": "boolean",
+        "default": true
+      },
+      "saveInterval": {
+        "type": "number",
+        "default": 2000,
+        "minimum": 1000
+      }
+    }
+  }
+}
