@@ -1,9 +1,10 @@
+import path from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   build: {
     lib: {
-      entry: 'src/index.ts',
+      entry: path.resolve(__dirname, 'src/index.ts'),
       formats: ['es'],
       fileName: () => 'mb-pomodoro.js',
     },

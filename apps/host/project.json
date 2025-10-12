@@ -14,17 +14,9 @@
       "executor": "nx:run-commands",
       "options": {
         "commands": [
-          {
-            "command": "pnpm exec vite build",
-            "cwd": "packages/mb-notes"
-          },
-          {
-            "command": "pnpm exec vite build",
-            "cwd": "packages/mb-pomodoro"
-          },
-          {
-            "command": "pnpm exec next build apps/host"
-          }
+          "pnpm exec vite build --config packages/mb-notes/vite.config.ts",
+          "pnpm exec vite build --config packages/mb-pomodoro/vite.config.ts",
+          "pnpm exec next build apps/host"
         ]
       }
     }

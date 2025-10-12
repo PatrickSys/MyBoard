@@ -122,7 +122,7 @@ export default function GridDashboard() {
         className={gridClassName}
         breakpoints={GRID_BREAKPOINTS}
         cols={GRID_COLUMNS}
-        rowHeight={96}
+        rowHeight={100}
         isDraggable={isEditing}
         isResizable={isEditing}
         margin={[16, 16]}
