@@ -1,5 +1,5 @@
 import { LitElement, css, html } from 'lit';
-import { emitReady, emitError } from '@myboard/sdk';
+import { emitReady, emitError, eventBus } from '@myboard/sdk';
 
 type Phase = 'idle' | 'work' | 'break';
 
@@ -113,9 +113,16 @@ export class MbPomodoroElement extends LitElement {
   private tick = () => {
     this.remainingMs = Math.max(0, this.remainingMs - 1000);
     if (this.remainingMs === 0) {
+      const completedPhase = this.phase;
       this.stop();
       this.phase = this.phase === 'work' ? 'break' : 'work';
       this.remainingMs = this.phase === 'work' ? 25 * 60 * 1000 : 5 * 60 * 1000;
+
+      // Emit event when a work cycle completes
+      if (completedPhase === 'work') {
+        console.log('[Pomodoro] Publishing cycle-complete event');
+        eventBus.publish('pomodoro', 'cycle-complete', { timestamp: Date.now() });
+      }
     }
     this.requestUpdate();
   };

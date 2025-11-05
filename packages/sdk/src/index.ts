@@ -1,17 +1,61 @@
+/**
+ * @myboard/sdk - Widget Lifecycle Contract
+ *
+ * Minimal helpers for framework-agnostic widget development.
+ */
+
+// Lifecycle events
 export const WIDGET_READY = 'widget-ready' as const;
 export const WIDGET_ERROR = 'widget-error' as const;
+export const WIDGET_CHANGE = 'widget-change' as const;
 
-export type WidgetErrorDetail = {
-  reason: string;
-};
+// Type exports
+export type {
+  WidgetChange,
+  WidgetErrorDetail,
+  WidgetTheme,
+  WidgetEventMap,
+} from './types';
 
+export type { WidgetEvent } from './event-bus';
+
+// Import types for internal use
+import type { WidgetChange, WidgetErrorDetail } from './types';
+
+// Event bus for widget-to-widget communication
+export { eventBus } from './event-bus';
+
+// Centralized state management
+export { widgetStore } from './widget-store';
+
+/**
+ * Emit when widget has successfully mounted and is ready to use.
+ */
 export function emitReady(target: Element): void {
   target.dispatchEvent(new CustomEvent(WIDGET_READY, { bubbles: true }));
 }
 
+/**
+ * Emit when widget encounters an error during mount or operation.
+ */
 export function emitError(target: Element, reason: string): void {
   const detail: WidgetErrorDetail = { reason };
   target.dispatchEvent(
     new CustomEvent(WIDGET_ERROR, { bubbles: true, detail })
+  );
+}
+
+/**
+ * Emit when widget value changes (e.g., user interaction, data update).
+ * Useful for widget-to-host communication.
+ */
+export function emitChange<T = unknown>(
+  target: Element,
+  value: T,
+  meta?: Record<string, unknown>
+): void {
+  const detail: WidgetChange<T> = { value, meta };
+  target.dispatchEvent(
+    new CustomEvent(WIDGET_CHANGE, { bubbles: true, detail })
   );
 }

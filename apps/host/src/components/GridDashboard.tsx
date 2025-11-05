@@ -5,6 +5,7 @@ import { Responsive, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import WidgetSlot from './WidgetSlot';
+import DebugPanel from './DebugPanel';
 import { WIDGETS } from '../config/widgets';
 
 const ResponsiveGridLayout = WidthProvider(Responsive as any);
@@ -17,19 +18,28 @@ const GRID_COLUMNS = { lg: 4, md: 2, sm: 1 } as const;
 const DEFAULT_LAYOUT: SavedLayout = [
   { i: 'notes', x: 0, y: 0, w: 2, h: 3 },
   { i: 'pomodoro', x: 2, y: 0, w: 2, h: 3 },
+  { i: 'counter', x: 0, y: 3, w: 2, h: 2 },
 ];
 
 export default function GridDashboard() {
   const [isEditing, setIsEditing] = useState(false);
-  const [layout, setLayout] = useState<SavedLayout>(() => {
+  const [isClient, setIsClient] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [layout, setLayout] = useState<SavedLayout>(DEFAULT_LAYOUT);
+
+  // Hydrate client-side data after mount
+  useEffect(() => {
+    setIsClient(true);
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? (JSON.parse(saved) as SavedLayout) : DEFAULT_LAYOUT;
+      const savedTheme = localStorage.getItem('myboard.theme');
+      if (savedTheme) setTheme(savedTheme as 'light' | 'dark');
+      
+      const savedLayout = localStorage.getItem(STORAGE_KEY);
+      if (savedLayout) setLayout(JSON.parse(savedLayout) as SavedLayout);
     } catch {
       // ignore storage errors
-      return DEFAULT_LAYOUT;
     }
-  });
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -63,6 +73,14 @@ export default function GridDashboard() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(layout)); } catch { /* ignore */ }
   }, [layout]);
 
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem('myboard.theme', theme);
+    } catch { /* ignore */ }
+  }, [theme]);
+
   const items = useMemo(() => {
     const map = new Map(layout.map((l) => [l.i, l] as const));
     return WIDGETS.map((w) => ({ w, l: map.get(w.id) }));
@@ -78,6 +96,7 @@ export default function GridDashboard() {
   }, []);
 
   const toggleEditing = () => setIsEditing(prev => !prev);
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
   const resetLayout = () => setLayout(DEFAULT_LAYOUT);
   const gridClassName = isEditing ? 'rgl rgl--editing' : 'rgl';
 
@@ -100,6 +119,14 @@ export default function GridDashboard() {
             </span>
           </div>
           <div className="topbar__actions">
+            <button
+              onClick={toggleTheme}
+              className="btn--ghost"
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
             <button
               onClick={toggleEditing}
               className={isEditing ? 'btn--primary' : 'btn--ghost'}
@@ -138,10 +165,12 @@ export default function GridDashboard() {
             className="grid-item"
             data-grid={{ i: w.id, x: l?.x ?? 0, y: l?.y ?? 0, w: l?.w ?? 2, h: l?.h ?? 3, minH: 2 }}
           >
-            <WidgetSlot title={w.title} tag={w.tag} url={w.url} />
+            <WidgetSlot id={w.id} title={w.title} tag={w.tag} url={w.url} />
           </div>
         ))}
       </ResponsiveGridLayout>
+
+      <DebugPanel />
     </main>
   );
 }

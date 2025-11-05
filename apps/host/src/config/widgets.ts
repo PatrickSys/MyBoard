@@ -18,6 +18,10 @@ export const WIDGETS: ReadonlyArray<WidgetConfigEntry> = [
     tag: 'mb-pomodoro',
     url: '/widgets/mb-pomodoro.js',
   },
+  {
+    id: 'counter',
+    title: 'Productivity',
+    tag: 'mb-counter',
+    url: '/widgets/mb-counter.js',
+  },
 ];
-
-

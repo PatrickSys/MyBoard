@@ -2,16 +2,18 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ensureLoaded } from '../lib/widget-loader';
+import { performanceTracker } from '../lib/performance-tracker';
 
 type SlotStatus = 'loading' | 'ready' | 'error';
 
 type Props = {
+  id: string;
   tag: string;
   url: string;
   title?: string;
 };
 
-export default function WidgetSlot({ tag, url, title }: Props) {
+export default function WidgetSlot({ id, tag, url, title }: Props) {
   const hostRef = useRef<HTMLElement | null>(null);
   const [status, setStatus] = useState<SlotStatus>('loading');
   const [failReason, setFailReason] = useState<string | undefined>(undefined);
@@ -22,17 +24,21 @@ export default function WidgetSlot({ tag, url, title }: Props) {
     setStatus('loading');
     setFailReason(undefined);
 
+    // Start performance tracking
+    performanceTracker.startTracking(id);
+
     ensureLoaded(url)
       .catch((err: unknown) => {
         if (!cancelled) {
           setStatus('error');
           setFailReason(err instanceof Error ? err.message : 'load-error');
+          performanceTracker.markError(id);
         }
       });
 
     console.debug(`[WidgetSlot] loading: ${tag} from ${url}`);
     return () => { cancelled = true; };
-  }, [url]);
+  }, [url, id, tag]);
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
@@ -62,6 +68,7 @@ export default function WidgetSlot({ tag, url, title }: Props) {
       window.clearTimeout(timeout);
       setStatus('ready');
       setFailReason(undefined);
+      performanceTracker.markReady(id);
     };
     const onError = (e: Event) => {
       if (settled) return;
@@ -70,6 +77,7 @@ export default function WidgetSlot({ tag, url, title }: Props) {
       setStatus('error');
       const detail: { reason: string } = (e as CustomEvent).detail;
       setFailReason(detail && typeof detail.reason === 'string' ? detail.reason : 'widget-error');
+      performanceTracker.markError(id);
     };
 
     widgetElement.addEventListener('widget-ready', onReady as EventListener);
@@ -79,9 +87,13 @@ export default function WidgetSlot({ tag, url, title }: Props) {
       widgetElement.removeEventListener('widget-ready', onReady as EventListener);
       widgetElement.removeEventListener('widget-error', onError as EventListener);
     };
-  }, [tag]);
+  }, [tag, id]);
 
   const Tag = useMemo(() => tag as React.ElementType, [tag]);
+
+  // Get load time for display in dev mode
+  const loadTime = performanceTracker.getMetrics(id)?.loadDuration;
+  const showLoadTime = process.env.NODE_ENV !== 'production' && status === 'ready' && loadTime;
 
   return (
     <div className="slot">
@@ -94,6 +106,7 @@ export default function WidgetSlot({ tag, url, title }: Props) {
         >
           <span className="slot__dot" />
           {status === 'error' ? (failReason ?? 'error') : status}
+          {showLoadTime && ` (${loadTime.toFixed(0)}ms)`}
         </span>
       </div>
       <div className="slot__body" data-status={status}>

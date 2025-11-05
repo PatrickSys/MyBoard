@@ -1,24 +1,33 @@
-# MyBoard — v1
+# MyBoard — v1.1
 
-A polished, framework-agnostic dashboard. The host is Next.js, widgets are Web Components (React, Lit, or vanilla), composed at runtime with a tiny lifecycle contract.
+A modern, framework-agnostic widget dashboard showcasing micro-frontend architecture, cross-widget communication, and centralized state management.
 
-## What’s included in v1
+## What's included in v1.1
 
-- React Grid Layout dashboard (2×2 responsive) with edit mode:
-  - Drag/resize via card header handles
-  - Keyboard: Shift+E to toggle edit, Shift+R to reset layout
-  - Layout persistence in `localStorage`
-- Widget loading via URLs with a minimal contract:
-  - Events: `widget-ready` (bubbles) and `widget-error` (bubbles, `{ detail: { reason } }`)
-  - Lazy loader dedupes by URL and times out after 10s
-  - Slots show loading skeleton, error panel (with retry), and fade-in on ready
-- Polished UI/UX:
-  - Light theme, consistent borders/shadows, focus rings
-  - Topbar with brand, mode chip, and actions
-  - Status badges for loading/ready/error with subtle colored dot
-- Two widgets (bundled to `apps/host/public/widgets`):
-  - Notes (React): Enter-to-add, calm styling
-  - Pomodoro (Lit): Larger time, slimmer bar anchored to bottom
+### Dashboard Features
+- React Grid Layout with responsive 4/2/1 column design
+- Edit mode: Drag/resize widgets, keyboard shortcuts (Shift+E, Shift+R)
+- Light/dark theme toggle with CSS custom properties
+- Layout persistence in localStorage
+- Smooth widget loading with skeleton animations
+- Performance tracking with load time display (dev mode)
+
+### Widget System
+- **Event Bus**: Cross-widget communication without tight coupling
+- **Widget Store**: Centralized state management with localStorage persistence  
+- **Performance Tracker**: Lightweight monitoring of load times and errors
+- **Debug Panel**: Development tools (Shift+D) showing metrics, events, and state
+
+### Included Widgets
+- **Notes** (React): Quick note-taking with persistent storage
+- **Pomodoro** (Lit): Focus timer with work/break intervals
+- **Counter** (Lit): Demonstrates event bus by tracking notes added
+
+### Developer Experience
+- Type-safe SDK (`@myboard/sdk`) for widget development
+- Framework-agnostic: Works with React, Lit, Angular, vanilla JS
+- Hot reload during development
+- Comprehensive documentation and examples
 
 ## Quick start
 
@@ -39,20 +48,30 @@ pnpm nx build host
 myboard/
   apps/
     host/                     # Next.js dashboard app
-      public/widgets/         # Built widget bundles (mb-notes.js, mb-pomodoro.js)
+      src/
+        components/           # Dashboard, WidgetSlot, DebugPanel
+        lib/                  # widget-loader, performance-tracker
+      public/widgets/         # Built widget bundles
   packages/
-    mb-notes/                 # React widget (Web Component)
-    mb-pomodoro/              # Lit widget (Web Component)
-  sdk/             # Contract helpers (emitReady, emitError)
+    sdk/                      # Widget SDK (events, store, event bus)
+    mb-notes/                 # Notes widget (React)
+    mb-pomodoro/              # Pomodoro timer (Lit)
+    mb-counter/               # Counter widget (Lit) - demonstrates system
 ```
 
-## Contract (v1)
+## Widget Contract
 
-- Events:
-  - `widget-ready` (bubbles) — widget booted
-  - `widget-error` (bubbles, `{ detail: { reason } }`) — host displays error
-- Emission guidance: emit `widget-ready` asynchronously from `connectedCallback` (e.g., `queueMicrotask`) to ensure listeners are attached.
-- Helpers: `@myboard/sdk` exports `emitReady(el)` and `emitError(el, reason)`.
+### Lifecycle Events
+- `widget-ready` — Widget successfully mounted
+- `widget-error` — Widget encountered an error
+- `widget-change` — Widget value changed
+
+### SDK Features
+- **Event Bus**: `eventBus.publish()` / `eventBus.subscribe()` for cross-widget communication
+- **Widget Store**: `widgetStore.getState()` / `widgetStore.setState()` for persistent state
+- **Type Safety**: Full TypeScript support with comprehensive types
+
+See [`packages/sdk/README.md`](packages/sdk/README.md) for detailed API documentation.
 
 ## Widgets and lazy loading
 
@@ -98,12 +117,40 @@ export default defineConfig({
 - Host is a standard Next.js app; deploy with your preferred provider (e.g., Vercel)
 - Ensure built widget bundles exist in `apps/host/public/widgets/`
 
-## Roadmap (post-v1)
+## Architecture Highlights
 
-- Angular Elements widget
-- PWA basics (install + offline shell)
-- Contract expansion (props/outputs/theme tokens)
-- Optional persistence via Supabase
+### Micro-Frontend Pattern
+- Independent widget deployment
+- Framework-agnostic design
+- Runtime composition
+- Error isolation
+
+### State Management
+- Centralized widget store
+- Automatic localStorage persistence
+- Reactive subscriptions
+- Cross-widget event bus
+
+### Developer Experience
+- Type-safe SDK
+- Performance monitoring
+- Debug panel (dev mode)
+- Hot module reload
+
+## Keyboard Shortcuts
+
+- `Shift+E` — Toggle edit mode
+- `Shift+R` — Reset layout
+- `Shift+D` — Toggle debug panel (dev mode)
+
+## Roadmap
+
+- [ ] Widget marketplace/discovery
+- [ ] Widget configuration UI
+- [ ] Angular Elements example widget
+- [ ] PWA support (offline, installable)
+- [ ] Backend integration (Supabase/Auth)
+- [ ] Comprehensive test coverage
 
 ## License
 
