@@ -104,7 +104,7 @@ class WidgetStore {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       return;
     }
-    
+
     try {
       const stored = localStorage.getItem(this.storageKey);
       if (stored) {
@@ -126,7 +126,7 @@ class WidgetStore {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       return;
     }
-    
+
     try {
       const statesObj: Record<string, unknown> = {};
       this.states.forEach((state, widgetId) => {
@@ -143,4 +143,3 @@ class WidgetStore {
  * Global widget store instance.
  */
 export const widgetStore = new WidgetStore();
-

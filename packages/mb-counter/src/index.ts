@@ -134,37 +134,55 @@ export class MbCounterElement extends LitElement {
       });
 
       // Subscribe to notes events
-      this.unsubscribeNoteAdded = eventBus.subscribe('notes', 'note-added', (event) => {
-        console.log('[Productivity] Note added event received:', event);
-        this.notesCreated++;
-        this.saveStats();
-        this.requestUpdate(); // Force re-render
-      });
-
-      this.unsubscribeNoteDeleted = eventBus.subscribe('notes', 'note-deleted', (event) => {
-        console.log('[Productivity] Note deleted event received:', event);
-        if (this.notesCreated > 0) {
-          this.notesCreated--;
+      this.unsubscribeNoteAdded = eventBus.subscribe(
+        'notes',
+        'note-added',
+        (event) => {
+          console.log('[Productivity] Note added event received:', event);
+          this.notesCreated++;
           this.saveStats();
           this.requestUpdate(); // Force re-render
         }
-      });
+      );
+
+      this.unsubscribeNoteDeleted = eventBus.subscribe(
+        'notes',
+        'note-deleted',
+        (event) => {
+          console.log('[Productivity] Note deleted event received:', event);
+          if (this.notesCreated > 0) {
+            this.notesCreated--;
+            this.saveStats();
+            this.requestUpdate(); // Force re-render
+          }
+        }
+      );
 
       // Subscribe to pomodoro events
-      this.unsubscribePomodoroComplete = eventBus.subscribe('pomodoro', 'cycle-complete', (event) => {
-        console.log('[Productivity] Pomodoro complete event received:', event);
-        this.pomodoroCompleted++;
-        this.saveStats();
-        this.requestUpdate(); // Force re-render
-      });
+      this.unsubscribePomodoroComplete = eventBus.subscribe(
+        'pomodoro',
+        'cycle-complete',
+        (event) => {
+          console.log(
+            '[Productivity] Pomodoro complete event received:',
+            event
+          );
+          this.pomodoroCompleted++;
+          this.saveStats();
+          this.requestUpdate(); // Force re-render
+        }
+      );
 
       // Subscribe to widget store changes (in case another instance updates)
-      this.unsubscribeStore = widgetStore.subscribe<ProductivityStats>(WIDGET_ID, (stats) => {
-        console.log('[Productivity] Store updated:', stats);
-        this.notesCreated = stats.notesCreated || 0;
-        this.pomodoroCompleted = stats.pomodoroCompleted || 0;
-        this.requestUpdate();
-      });
+      this.unsubscribeStore = widgetStore.subscribe<ProductivityStats>(
+        WIDGET_ID,
+        (stats) => {
+          console.log('[Productivity] Store updated:', stats);
+          this.notesCreated = stats.notesCreated || 0;
+          this.pomodoroCompleted = stats.pomodoroCompleted || 0;
+          this.requestUpdate();
+        }
+      );
 
       queueMicrotask(() => emitReady(this));
     } catch (e) {
@@ -222,4 +240,3 @@ declare global {
     'mb-counter': MbCounterElement;
   }
 }
-

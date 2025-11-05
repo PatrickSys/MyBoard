@@ -33,7 +33,7 @@ export default function GridDashboard() {
     try {
       const savedTheme = localStorage.getItem('myboard.theme');
       if (savedTheme) setTheme(savedTheme as 'light' | 'dark');
-      
+
       const savedLayout = localStorage.getItem(STORAGE_KEY);
       if (savedLayout) setLayout(JSON.parse(savedLayout) as SavedLayout);
     } catch {
