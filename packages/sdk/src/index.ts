@@ -11,7 +11,7 @@ export function emitReady(target: Element): void {
 
 export function emitError(target: Element, reason: string): void {
   const detail: WidgetErrorDetail = { reason };
-  target.dispatchEvent(new CustomEvent(WIDGET_ERROR, { bubbles: true, detail }));
+  target.dispatchEvent(
+    new CustomEvent(WIDGET_ERROR, { bubbles: true, detail })
+  );
 }
-
-

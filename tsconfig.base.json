@@ -18,8 +18,8 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@myboard/widget-utils": [
-        "packages/widget-utils/src/index.ts"
+      "@myboard/sdk": [
+        "packages/sdk/src/index.ts"
       ]
     }
   },

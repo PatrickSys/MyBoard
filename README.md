@@ -43,7 +43,7 @@ myboard/
   packages/
     mb-notes/                 # React widget (Web Component)
     mb-pomodoro/              # Lit widget (Web Component)
-    widget-utils/             # Contract helpers (emitReady, emitError)
+  sdk/             # Contract helpers (emitReady, emitError)
 ```
 
 ## Contract (v1)
@@ -52,7 +52,7 @@ myboard/
   - `widget-ready` (bubbles) — widget booted
   - `widget-error` (bubbles, `{ detail: { reason } }`) — host displays error
 - Emission guidance: emit `widget-ready` asynchronously from `connectedCallback` (e.g., `queueMicrotask`) to ensure listeners are attached.
-- Helpers: `@myboard/widget-utils` exports `emitReady(el)` and `emitError(el, reason)`.
+- Helpers: `@myboard/sdk` exports `emitReady(el)` and `emitError(el, reason)`.
 
 ## Widgets and lazy loading
 

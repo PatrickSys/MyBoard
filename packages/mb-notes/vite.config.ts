@@ -22,16 +22,12 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@myboard/widget-utils': new URL('../widget-utils/src/index.ts', import.meta.url).pathname,
+      '@myboard/sdk': new URL('../sdk/src/index.ts', import.meta.url).pathname,
     },
   },
   define: {
     'process.env.NODE_ENV': '"production"',
     'process.env': '{}',
-    'process': '{}',
+    process: '{}',
   },
 });
-
-
-
-

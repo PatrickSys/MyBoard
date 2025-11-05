@@ -1,0 +1,7 @@
+{
+  "name": "@myboard/sdk",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "root": "packages/sdk",
+  "sourceRoot": "packages/sdk/src",
+  "projectType": "library"
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { emitReady, emitError } from '@myboard/widget-utils';
+import { emitReady, emitError } from '@myboard/sdk';
 
 type Note = { id: string; text: string };
 

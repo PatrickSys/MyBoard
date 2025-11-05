@@ -3,7 +3,7 @@
 ## Project Structure & Module Organization
 - Root is an Nx + pnpm monorepo. Key paths:
   - `apps/host/` — Next.js dashboard app (UI, API routes, styles).
-  - `packages/` — reusable widget packages (`mb-*`) and `widget-utils`.
+  - `packages/` — reusable widget packages (`mb-*`) and `sdk`.
   - `apps/host/public/widgets/hello-widgets.js` — demo web components.
   - `apps/host/src/config/widgets.ts` — widget registry (id, title, tag, url).
 
