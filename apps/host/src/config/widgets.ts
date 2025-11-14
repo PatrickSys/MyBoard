@@ -7,6 +7,24 @@ export type WidgetConfigEntry = {
 
 export const WIDGETS: ReadonlyArray<WidgetConfigEntry> = [
   {
+    id: 'clock',
+    title: 'Clock',
+    tag: 'mb-clock',
+    url: '/widgets/mb-clock.js',
+  },
+  {
+    id: 'tasks',
+    title: 'Tasks',
+    tag: 'mb-tasks',
+    url: '/widgets/mb-tasks.js',
+  },
+  {
+    id: 'links',
+    title: 'Quick Links',
+    tag: 'mb-links',
+    url: '/widgets/mb-links.js',
+  },
+  {
     id: 'notes',
     title: 'Notes',
     tag: 'mb-notes',
