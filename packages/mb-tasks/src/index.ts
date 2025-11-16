@@ -1,285 +1,200 @@
 import { LitElement, html, css } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
 import { emitReady } from '@myboard/widget-utils';
 
-interface Task {
-  id: string;
-  text: string;
-  completed: boolean;
-}
+type Task = { id: string; text: string; completed: boolean };
 
-@customElement('mb-tasks')
-export class TasksWidget extends LitElement {
-  @state() private tasks: Task[] = [];
+export class MbTasksElement extends LitElement {
+  private tasks: Task[] = [];
 
   private readonly STORAGE_KEY = 'mb-tasks';
 
   static styles = css`
-    :host {
-      display: block;
+    :host { display: block; font-family: system-ui, -apple-system, sans-serif; height: 100%; }
+    .surface {
       height: 100%;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-
-    .container {
-      height: 100%;
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      border-radius: 12px;
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      border-radius: 16px;
       padding: 20px;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      color: white;
-      overflow: hidden;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
     }
-
-    h3 {
-      margin: 0 0 16px 0;
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .add-form {
+    .row {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(16, 185, 129, 0.1);
     }
-
     input {
       flex: 1;
       padding: 10px 12px;
-      border: none;
-      border-radius: 8px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 10px;
       background: rgba(255, 255, 255, 0.9);
-      font-size: 14px;
+      font-size: 0.875rem;
+      transition: all 0.2s ease;
     }
-
-    input::placeholder {
-      color: rgba(0, 0, 0, 0.4);
+    input:focus {
+      outline: none;
+      border-color: #10b981;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
     }
-
-    .btn {
-      background: rgba(255, 255, 255, 0.2);
-      border: none;
-      border-radius: 8px;
-      color: white;
-      cursor: pointer;
+    button {
       padding: 10px 16px;
-      font-size: 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
       font-weight: 500;
-      transition: all 0.2s;
-      white-space: nowrap;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
-
-    .btn:hover {
-      background: rgba(255, 255, 255, 0.3);
+    button:hover {
       transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
-
-    .tasks-list {
+    .list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
       flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      overflow: auto;
+      min-height: 0;
+      padding-right: 4px;
     }
-
-    .task-item {
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      padding: 12px;
+    .item {
       display: flex;
       align-items: center;
       gap: 12px;
-      transition: all 0.2s;
-      backdrop-filter: blur(10px);
+      border: 1px solid rgba(16, 185, 129, 0.1);
+      border-radius: 12px;
+      padding: 12px 16px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(8px);
     }
-
-    .task-item:hover {
-      background: rgba(255, 255, 255, 0.2);
+    .item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.2);
     }
-
-    .task-item.completed {
+    .item.done {
       opacity: 0.6;
     }
-
-    .checkbox {
+    .item.done .text {
+      text-decoration: line-through;
+    }
+    .check {
       width: 20px;
       height: 20px;
       min-width: 20px;
-      border: 2px solid rgba(255, 255, 255, 0.5);
+      border: 2px solid rgba(16, 185, 129, 0.3);
       border-radius: 4px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s;
+      background: white;
     }
-
-    .checkbox:hover {
-      border-color: rgba(255, 255, 255, 0.8);
+    .check.done {
+      background: #10b981;
+      border-color: #10b981;
     }
-
-    .checkbox.checked {
-      background: rgba(255, 255, 255, 0.9);
-      border-color: rgba(255, 255, 255, 0.9);
-    }
-
-    .checkmark {
-      color: #059669;
-      font-weight: bold;
-      font-size: 14px;
-    }
-
-    .task-text {
+    .text {
       flex: 1;
-      font-size: 14px;
+      font-size: 0.875rem;
       line-height: 1.4;
       word-break: break-word;
     }
-
-    .task-item.completed .task-text {
-      text-decoration: line-through;
-    }
-
-    .delete-btn {
-      background: rgba(239, 68, 68, 0.8);
-      border: none;
-      border-radius: 6px;
-      color: white;
+    .del {
+      background: transparent;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      color: #64748b;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.75rem;
       cursor: pointer;
-      width: 28px;
-      height: 28px;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      flex-shrink: 0;
+      transition: all 0.2s ease;
     }
-
-    .delete-btn:hover {
-      background: rgba(239, 68, 68, 1);
-      transform: scale(1.1);
-    }
-
-    .empty-state {
-      text-align: center;
-      opacity: 0.6;
-      padding: 40px 20px;
-      font-size: 14px;
-    }
-
-    .stats {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.2);
-      font-size: 12px;
-      opacity: 0.8;
-      text-align: center;
+    .del:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+      transform: translateY(-1px);
     }
   `;
 
-  connectedCallback() {
+  connectedCallback(): void {
     super.connectedCallback();
-    this.loadTasks();
+    try {
+      const s = localStorage.getItem(this.STORAGE_KEY);
+      this.tasks = s ? (JSON.parse(s) as Task[]) : [];
+    } catch { }
     queueMicrotask(() => emitReady(this));
   }
 
-  private loadTasks() {
-    try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      if (stored) {
-        this.tasks = JSON.parse(stored);
-      }
-    } catch (e) {
-      console.error('Failed to load tasks:', e);
-      this.tasks = [];
-    }
-  }
-
-  private saveTasks() {
+  private save() {
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.tasks));
-    } catch (e) {
-      console.error('Failed to save tasks:', e);
-    }
+    } catch { }
   }
 
-  private handleAdd(e: Event) {
+  private add(e: Event) {
     e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const input = form.querySelector('input') as HTMLInputElement;
-    const text = input.value.trim();
-
-    if (text) {
-      this.tasks = [
-        {
-          id: Date.now().toString(),
-          text,
-          completed: false,
-        },
-        ...this.tasks,
-      ];
-      this.saveTasks();
-      input.value = '';
-    }
+    const input = (e.target as HTMLFormElement).querySelector('input') as HTMLInputElement;
+    const v = input.value.trim();
+    if (!v) return;
+    this.tasks = [{ id: String(Date.now()), text: v, completed: false }, ...this.tasks];
+    this.save();
+    input.value = '';
+    this.requestUpdate();
   }
 
-  private toggleTask(id: string) {
-    this.tasks = this.tasks.map((task) =>
-      task.id === id ? { ...task, completed: !task.completed } : task
-    );
-    this.saveTasks();
+  private toggle(id: string) {
+    this.tasks = this.tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
+    this.save();
+    this.requestUpdate();
   }
 
-  private deleteTask(id: string) {
-    this.tasks = this.tasks.filter((task) => task.id !== id);
-    this.saveTasks();
+  private del(id: string) {
+    this.tasks = this.tasks.filter((t) => t.id !== id);
+    this.save();
+    this.requestUpdate();
   }
 
   render() {
-    const completedCount = this.tasks.filter((t) => t.completed).length;
-    const totalCount = this.tasks.length;
-
     return html`
-      <div class="container">
-        <h3>Tasks</h3>
-
-        <form class="add-form" @submit=${this.handleAdd}>
-          <input type="text" placeholder="Add a new task..." />
-          <button type="submit" class="btn">Add</button>
+      <div class="surface">
+        <form class="row" @submit=${(e: Event) => this.add(e)}>
+          <input placeholder="Add task" />
+          <button type="submit">Add</button>
         </form>
-
-        <div class="tasks-list">
-          ${this.tasks.length === 0
-            ? html`<div class="empty-state">No tasks yet. Add one above!</div>`
-            : this.tasks.map(
-                (task) => html`
-                  <div class="task-item ${task.completed ? 'completed' : ''}">
-                    <div
-                      class="checkbox ${task.completed ? 'checked' : ''}"
-                      @click=${() => this.toggleTask(task.id)}
-                    >
-                      ${task.completed ? html`<span class="checkmark">✓</span>` : ''}
-                    </div>
-                    <div class="task-text">${task.text}</div>
-                    <button class="delete-btn" @click=${() => this.deleteTask(task.id)}>
-                      ×
-                    </button>
-                  </div>
-                `
-              )}
-        </div>
-
-        ${totalCount > 0
-          ? html`
-              <div class="stats">
-                ${completedCount} of ${totalCount} completed
-                ${completedCount === totalCount && totalCount > 0 ? ' 🎉' : ''}
-              </div>
+        <ul class="list">
+          ${this.tasks.map(
+            (t) => html`
+              <li class="item ${t.completed ? 'done' : ''}">
+                <div class="check ${t.completed ? 'done' : ''}" @click=${() => this.toggle(t.id)}>
+                  ${t.completed ? '✓' : ''}
+                </div>
+                <span class="text">${t.text}</span>
+                <button class="del" @click=${() => this.del(t.id)}>Delete</button>
+              </li>
             `
-          : ''}
+          )}
+        </ul>
       </div>
     `;
   }
+}
+
+if (!customElements.get('mb-tasks')) {
+  customElements.define('mb-tasks', MbTasksElement);
 }
