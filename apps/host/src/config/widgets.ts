@@ -13,6 +13,12 @@ export const WIDGETS: ReadonlyArray<WidgetConfigEntry> = [
     url: '/widgets/mb-clock.js',
   },
   {
+    id: 'weather',
+    title: 'Weather',
+    tag: 'mb-weather',
+    url: '/widgets/mb-weather.js',
+  },
+  {
     id: 'tasks',
     title: 'Tasks',
     tag: 'mb-tasks',
@@ -23,6 +29,18 @@ export const WIDGETS: ReadonlyArray<WidgetConfigEntry> = [
     title: 'Quick Links',
     tag: 'mb-links',
     url: '/widgets/mb-links.js',
+  },
+  {
+    id: 'calculator',
+    title: 'Calculator',
+    tag: 'mb-calculator',
+    url: '/widgets/mb-calculator.js',
+  },
+  {
+    id: 'stopwatch',
+    title: 'Stopwatch',
+    tag: 'mb-stopwatch',
+    url: '/widgets/mb-stopwatch.js',
   },
   {
     id: 'notes',

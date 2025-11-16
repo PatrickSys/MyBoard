@@ -16,10 +16,13 @@ const GRID_BREAKPOINTS = { lg: 1200, md: 900, sm: 0 } as const;
 const GRID_COLUMNS = { lg: 4, md: 2, sm: 1 } as const;
 const DEFAULT_LAYOUT: SavedLayout = [
   { i: 'clock', x: 0, y: 0, w: 1, h: 2 },
-  { i: 'tasks', x: 1, y: 0, w: 2, h: 3 },
-  { i: 'links', x: 3, y: 0, w: 1, h: 2 },
-  { i: 'pomodoro', x: 0, y: 2, w: 2, h: 3 },
-  { i: 'notes', x: 2, y: 2, w: 2, h: 3 },
+  { i: 'weather', x: 1, y: 0, w: 1, h: 2 },
+  { i: 'tasks', x: 2, y: 0, w: 2, h: 3 },
+  { i: 'links', x: 0, y: 2, w: 1, h: 2 },
+  { i: 'calculator', x: 1, y: 2, w: 1, h: 3 },
+  { i: 'notes', x: 2, y: 3, w: 2, h: 3 },
+  { i: 'stopwatch', x: 0, y: 4, w: 1, h: 3 },
+  { i: 'pomodoro', x: 2, y: 6, w: 2, h: 3 },
 ];
 
 export default function GridDashboard() {
