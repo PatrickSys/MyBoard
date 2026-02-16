@@ -8,7 +8,8 @@
   "implicitDependencies": [
     "@myboard/mb-notes",
     "@myboard/mb-pomodoro",
-    "@myboard/mb-counter"
+    "@myboard/mb-counter",
+    "@myboard/mb-taskboard"
   ],
   "targets": {
     "build": {
@@ -18,6 +19,7 @@
           "pnpm exec vite build --config packages/mb-notes/vite.config.ts",
           "pnpm exec vite build --config packages/mb-pomodoro/vite.config.ts",
           "pnpm exec vite build --config packages/mb-counter/vite.config.ts",
+          "pnpm exec vite build --config packages/mb-taskboard/vite.config.ts",
           "pnpm exec next build apps/host"
         ]
       }
