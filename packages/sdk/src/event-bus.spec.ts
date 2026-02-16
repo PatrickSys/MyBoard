@@ -1,8 +1,10 @@
 import { eventBus } from './event-bus';
+import { registerHostBridge } from './host-bridge';
 
 describe('EventBus', () => {
     beforeEach(() => {
         eventBus.clear();
+        registerHostBridge({});
     });
 
     describe('publish/subscribe', () => {
@@ -108,6 +110,21 @@ describe('EventBus', () => {
 
             eventBus.clear();
             eventBus.publish('widget', 'event');
+
+            expect(handler).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('host governance', () => {
+        it('should block publish when host bridge denies event', () => {
+            const handler = jest.fn();
+            eventBus.subscribe('widget', 'event', handler);
+
+            registerHostBridge({
+                beforePublishEvent: () => false,
+            });
+
+            eventBus.publish('widget', 'event', { value: 1 });
 
             expect(handler).not.toHaveBeenCalled();
         });
