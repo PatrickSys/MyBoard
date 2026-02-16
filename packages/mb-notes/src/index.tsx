@@ -1,61 +1,313 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { emitReady, emitError, widgetStore, eventBus } from '@myboard/sdk';
+import {
+  type WidgetCommandRequest,
+  emitError,
+  emitReady,
+  eventBus,
+  getWidgetSettings,
+  registerWidgetCommandHandler,
+  setWidgetSettings,
+  widgetStore,
+} from '@myboard/sdk';
 
-type Note = { id: string; text: string };
+type Note = {
+  id: string;
+  text: string;
+  tags: string[];
+  pinned: boolean;
+  archived: boolean;
+  updatedAt: number;
+};
+
+type NotesSettings = {
+  showArchived?: boolean;
+};
 
 const WIDGET_ID = 'notes';
 
+function parseTags(value: string): string[] {
+  return value
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
 function NotesApp() {
-  const [notes, setNotes] = useState<Note[]>(() => {
-    const stored = widgetStore.getState<Note[]>(WIDGET_ID);
-    return stored || [];
-  });
+  const [notes, setNotes] = useState<Note[]>(() => widgetStore.getState<Note[]>(WIDGET_ID) ?? []);
   const [text, setText] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [query, setQuery] = useState('');
+  const [activeTag, setActiveTag] = useState<string>('all');
+  const [showArchived, setShowArchived] = useState<boolean>(() => {
+    const settings = getWidgetSettings<NotesSettings>(WIDGET_ID);
+    return Boolean(settings?.showArchived);
+  });
+
+  useEffect(() => {
+    const unsubSettings = eventBus.subscribe('host', 'settings-updated', (event) => {
+      const { widgetId, settings: nextSettings } = event.data as {
+        widgetId: string;
+        settings: NotesSettings;
+      };
+      if (widgetId === WIDGET_ID && nextSettings.showArchived !== undefined) {
+        setShowArchived(nextSettings.showArchived);
+      }
+    });
+
+    const unregisterCommands = registerWidgetCommandHandler(
+      WIDGET_ID,
+      async (request: WidgetCommandRequest) => {
+        const { commandType, payload } = request;
+
+        if (commandType === 'note.create' || commandType === 'add-note') {
+          const textValue =
+            typeof payload?.text === 'string'
+              ? payload.text
+              : typeof payload?.title === 'string'
+                ? payload.title
+                : 'Automated Note';
+          const tags =
+            typeof payload?.tags === 'string'
+              ? parseTags(payload.tags)
+              : Array.isArray(payload?.tags)
+                ? payload.tags.filter((entry): entry is string => typeof entry === 'string')
+                : [];
+
+          const note: Note = {
+            id: String(Date.now()),
+            text: textValue,
+            tags,
+            pinned: false,
+            archived: false,
+            updatedAt: Date.now(),
+          };
+          setNotes((prev) => [note, ...prev]);
+          eventBus.publish(WIDGET_ID, 'note-added', { note });
+          return { ok: true, result: { noteId: note.id } };
+        }
+
+        if (commandType === 'note.pin-latest') {
+          let pinnedId: string | undefined;
+          setNotes((prev) => {
+            if (prev.length === 0) return prev;
+            let latest = prev[0];
+            for (const entry of prev) {
+              if (entry.updatedAt > latest.updatedAt) {
+                latest = entry;
+              }
+            }
+            pinnedId = latest.id;
+            return prev.map((entry) =>
+              entry.id === latest.id
+                ? { ...entry, pinned: true, updatedAt: Date.now() }
+                : entry
+            );
+          });
+          if (pinnedId) {
+            eventBus.publish(WIDGET_ID, 'note-pinned', { id: pinnedId, pinned: true });
+          }
+          return { ok: true, result: { noteId: pinnedId } };
+        }
+
+        if (commandType === 'note.clear' || commandType === 'clear-notes') {
+          setNotes([]);
+          return { ok: true };
+        }
+
+        return {
+          ok: false,
+          code: 'COMMAND_ACTION_NOT_SUPPORTED',
+          reason: `notes does not support ${commandType}`,
+        };
+      }
+    );
+
+    return () => {
+      unsubSettings();
+      unregisterCommands();
+    };
+  }, []);
 
   useEffect(() => {
     widgetStore.setState(WIDGET_ID, notes);
   }, [notes]);
 
-  const add = () => {
-    const v = text.trim();
-    if (!v) return;
-    const newNote = { id: String(Date.now()), text: v };
-    setNotes((n) => [newNote, ...n]);
-    setText('');
+  useEffect(() => {
+    setWidgetSettings<NotesSettings>(WIDGET_ID, { showArchived });
+  }, [showArchived]);
 
-    // Publish event for other widgets
-    console.log('[Notes] Publishing note-added event:', newNote);
-    eventBus.publish(WIDGET_ID, 'note-added', { note: newNote });
+  const visibleNotes = useMemo(() => {
+    return notes
+      .filter((note) => (showArchived ? true : !note.archived))
+      .filter((note) => (query ? note.text.toLowerCase().includes(query.toLowerCase()) : true))
+      .filter((note) => (activeTag === 'all' ? true : note.tags.includes(activeTag)))
+      .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
+  }, [activeTag, notes, query, showArchived]);
+
+  const availableTags = useMemo(() => {
+    const tags = new Set<string>();
+    for (const note of notes) {
+      for (const tag of note.tags) tags.add(tag);
+    }
+    return ['all', ...Array.from(tags.values()).sort()];
+  }, [notes]);
+
+  const addNote = () => {
+    const value = text.trim();
+    if (!value) return;
+
+    const note: Note = {
+      id: String(Date.now()),
+      text: value,
+      tags: parseTags(tagsInput),
+      pinned: false,
+      archived: false,
+      updatedAt: Date.now(),
+    };
+    setNotes((previous) => [note, ...previous]);
+    setText('');
+    setTagsInput('');
+    eventBus.publish(WIDGET_ID, 'note-added', { note });
   };
-  const del = (id: string) => {
-    setNotes((n) => n.filter((x) => x.id !== id));
-    console.log('[Notes] Publishing note-deleted event:', id);
+
+  const deleteNote = (id: string) => {
+    setNotes((previous) => previous.filter((note) => note.id !== id));
     eventBus.publish(WIDGET_ID, 'note-deleted', { id });
   };
 
+  const togglePinned = (id: string) => {
+    setNotes((previous) =>
+      previous.map((note) => {
+        if (note.id !== id) return note;
+        const next = { ...note, pinned: !note.pinned, updatedAt: Date.now() };
+        eventBus.publish(WIDGET_ID, 'note-pinned', { id, pinned: next.pinned });
+        return next;
+      })
+    );
+  };
+
+  const toggleArchived = (id: string) => {
+    setNotes((previous) =>
+      previous.map((note) => {
+        if (note.id !== id) return note;
+        const next = { ...note, archived: !note.archived, updatedAt: Date.now() };
+        eventBus.publish(WIDGET_ID, 'note-updated', { note: next });
+        return next;
+      })
+    );
+  };
+
+  const startEdit = (note: Note) => {
+    setEditingId(note.id);
+    setEditingText(note.text);
+  };
+
+  const saveEdit = (id: string) => {
+    const value = editingText.trim();
+    if (!value) return;
+    setNotes((previous) =>
+      previous.map((note) => {
+        if (note.id !== id) return note;
+        const next = { ...note, text: value, updatedAt: Date.now() };
+        eventBus.publish(WIDGET_ID, 'note-updated', { note: next });
+        return next;
+      })
+    );
+    setEditingId(null);
+    setEditingText('');
+  };
+
   return (
-    <div style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+    <div style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, sans-serif', height: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div className="note-input-row">
         <input
           className="note-input"
           value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
-          placeholder="Quick note"
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') addNote();
+          }}
+          placeholder="Write a note"
         />
-        <button className="note-btn" onClick={add}>
+        <button className="note-btn" onClick={addNote}>
           Add
         </button>
       </div>
+      <input
+        className="note-input"
+        placeholder="Tags (comma separated)"
+        value={tagsInput}
+        onChange={(event) => setTagsInput(event.target.value)}
+      />
+      <div className="note-toolbar">
+        <input
+          className="note-input"
+          placeholder="Search notes"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <select className="note-input" value={activeTag} onChange={(event) => setActiveTag(event.target.value)}>
+          {availableTags.map((tag) => (
+            <option key={tag} value={tag}>
+              {tag === 'all' ? 'All tags' : `#${tag}`}
+            </option>
+          ))}
+        </select>
+        <label className="archive-toggle">
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(event) => setShowArchived(event.target.checked)}
+          />
+          Show archived
+        </label>
+      </div>
       <ul className="note-list">
-        {notes.map((n) => (
-          <li key={n.id} className="note-item">
-            <span style={{ whiteSpace: 'pre-wrap' }}>{n.text}</span>
-            <button className="btn-ghost" onClick={() => del(n.id)}>
-              Delete
-            </button>
+        {visibleNotes.map((note) => (
+          <li key={note.id} className={`note-item ${note.archived ? 'archived' : ''}`}>
+            <div className="note-main">
+              {editingId === note.id ? (
+                <input
+                  className="note-input"
+                  value={editingText}
+                  onChange={(event) => setEditingText(event.target.value)}
+                />
+              ) : (
+                <span style={{ whiteSpace: 'pre-wrap' }}>{note.text}</span>
+              )}
+              <div className="note-tags">
+                {note.tags.map((tag) => (
+                  <span key={`${note.id}:${tag}`} className="note-tag">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="note-actions">
+              {editingId === note.id ? (
+                <button className="btn-ghost" onClick={() => saveEdit(note.id)}>
+                  Save
+                </button>
+              ) : (
+                <button className="btn-ghost" onClick={() => startEdit(note)}>
+                  Edit
+                </button>
+              )}
+              <button className="btn-ghost" onClick={() => togglePinned(note.id)}>
+                {note.pinned ? 'Unpin' : 'Pin'}
+              </button>
+              <button className="btn-ghost" onClick={() => toggleArchived(note.id)}>
+                {note.archived ? 'Unarchive' : 'Archive'}
+              </button>
+              <button className="btn-ghost" onClick={() => deleteNote(note.id)}>
+                Delete
+              </button>
+            </div>
           </li>
         ))}
       </ul>
@@ -81,88 +333,92 @@ class MbNotesElement extends HTMLElement {
           display:flex;
           flex-direction:column;
           border:1px solid rgba(245, 158, 11, 0.2);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
         }
-        .note-input-row{
+        .note-input-row,.note-toolbar{
           display:flex;
-          gap:12px;
-          margin-bottom:16px;
-          min-height:40px;
-          padding-bottom:12px;
-          border-bottom:1px solid rgba(245, 158, 11, 0.1);
+          gap:10px;
+          margin-bottom:8px;
         }
         .note-input{
           flex:1;
-          padding:10px 12px;
-          border:1px solid rgba(245, 158, 11, 0.2);
+          min-width:0;
+          padding:9px 10px;
+          border:1px solid rgba(245, 158, 11, 0.25);
           border-radius:10px;
-          background:rgba(255,255,255,0.9);
-          font-size:0.875rem;
-          transition:all 0.2s ease;
-        }
-        .note-input:focus{
-          outline:none;
-          border-color:#f59e0b;
-          background:white;
-          box-shadow:0 0 0 3px rgba(245,158,11,0.1);
+          background:rgba(255,255,255,0.95);
+          font-size:0.85rem;
         }
         .note-btn{
-          padding:10px 16px;
+          border:1px solid rgba(245, 158, 11, 0.2);
           border-radius:10px;
-          border:1px solid rgba(245,158,11,0.2);
-          background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-          color:white;
-          font-weight:500;
-          font-size:0.875rem;
+          padding:9px 14px;
+          background:#d97706;
+          color:#fff;
           cursor:pointer;
-          transition:all 0.2s ease;
         }
-        .note-btn:hover{
-          transform:translateY(-1px);
-          box-shadow:0 4px 12px rgba(245,158,11,0.3);
+        .archive-toggle{
+          display:flex;
+          align-items:center;
+          gap:6px;
+          font-size:0.75rem;
+          color:#92400e;
+          white-space:nowrap;
         }
         .note-list{
           list-style:none;
           margin:0;
           padding:0;
           display:grid;
-          gap:10px;
-          flex:1;
+          gap:8px;
           overflow:auto;
           min-height:0;
-          padding-right:4px;
+          flex:1;
         }
         .note-item{
+          background:rgba(255,255,255,0.85);
+          border:1px solid rgba(245, 158, 11, 0.2);
+          border-radius:10px;
+          padding:10px;
           display:flex;
           justify-content:space-between;
-          align-items:center;
-          border:1px solid rgba(245,158,11,0.1);
-          border-radius:12px;
-          padding:12px 16px;
-          transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          background:rgba(255,255,255,0.8);
-          backdrop-filter:blur(8px);
+          gap:10px;
         }
-        .note-item:hover{
-          transform:translateY(-2px);
-          box-shadow:0 6px 20px rgba(245,158,11,0.15);
-          border-color:rgba(245,158,11,0.2);
+        .note-item.archived{
+          opacity:0.7;
+        }
+        .note-main{
+          min-width:0;
+          display:flex;
+          flex-direction:column;
+          gap:6px;
+        }
+        .note-tags{
+          display:flex;
+          flex-wrap:wrap;
+          gap:6px;
+        }
+        .note-tag{
+          background:rgba(245, 158, 11, 0.15);
+          border:1px solid rgba(245, 158, 11, 0.2);
+          border-radius:999px;
+          padding:1px 7px;
+          font-size:0.7rem;
+          color:#92400e;
+        }
+        .note-actions{
+          display:flex;
+          flex-direction:column;
+          gap:4px;
+          align-items:flex-end;
         }
         .btn-ghost{
           background:transparent;
-          border:1px solid rgba(245,158,11,0.2);
-          color:#64748b;
+          border:1px solid rgba(245,158,11,0.3);
+          color:#92400e;
           border-radius:8px;
-          padding:6px 12px;
-          font-size:0.75rem;
+          padding:5px 8px;
+          font-size:0.72rem;
           cursor:pointer;
-          transition:all 0.2s ease;
-        }
-        .btn-ghost:hover{
-          background:rgba(245,158,11,0.05);
-          border-color:rgba(245,158,11,0.3);
-          color:#f59e0b;
-          transform:translateY(-1px);
         }`;
       shadow.appendChild(style);
       const surface = document.createElement('div');
@@ -174,8 +430,8 @@ class MbNotesElement extends HTMLElement {
       this.#root = createRoot(mount);
       this.#root.render(<NotesApp />);
       queueMicrotask(() => emitReady(this));
-    } catch (e) {
-      emitError(this, e instanceof Error ? e.message : 'mount-error');
+    } catch (error) {
+      emitError(this, error instanceof Error ? error.message : 'mount-error');
     }
   }
 
@@ -184,7 +440,7 @@ class MbNotesElement extends HTMLElement {
       this.#root?.unmount();
       this.#root = null;
     } catch {
-      // Unmount errors are expected during cleanup
+      // ignore cleanup errors
     }
   }
 }
@@ -192,6 +448,3 @@ class MbNotesElement extends HTMLElement {
 if (!customElements.get('mb-notes')) {
   customElements.define('mb-notes', MbNotesElement);
 }
-
-
-
