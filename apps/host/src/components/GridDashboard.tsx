@@ -1,82 +1,90 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
-import { registerHostBridge } from '@myboard/sdk';
+import type { WidgetManifest, WidgetPermission } from '@myboard/sdk';
+import { eventBus, registerHostBridge } from '@myboard/sdk';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import WidgetSlot from './WidgetSlot';
+
+import SafeWidgetSlot from './SafeWidgetSlot';
 import DebugPanel from './DebugPanel';
-import { WIDGETS } from '../config/widgets';
-import { runtimeKernel } from '../lib/runtime-kernel-singleton';
+import WidgetMarketplace from './WidgetMarketplace';
+import WidgetSettingsPanel from './WidgetSettingsPanel';
+import DashboardHeader from './DashboardHeader';
+import AutomationStudio from './AutomationStudio';
+import SystemMonitor from './SystemMonitor';
+import NotificationHub from './NotificationHub';
 
-const ResponsiveGridLayout = WidthProvider(Responsive as any);
-registerHostBridge(runtimeKernel.bridge);
+import { widgetInstallStore } from '../lib/widget-install-store';
+import { canRequestCapability } from '../lib/widget-policy';
+import { runtimeKernel, syncKernelManifests } from '../lib/runtime-kernel-singleton';
+import { useWidgetCatalog } from '../hooks/useWidgetCatalog';
+import { useDashboardLayout } from '../hooks/useDashboardLayout';
+import { useAutomationRuntime } from '../hooks/useAutomationRuntime';
 
-type SavedLayout = { i: string; x: number; y: number; w: number; h: number }[];
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
-const STORAGE_KEY = 'myboard.layout';
 const GRID_BREAKPOINTS = { lg: 1200, md: 900, sm: 0 } as const;
 const GRID_COLUMNS = { lg: 4, md: 2, sm: 1 } as const;
-const DEFAULT_LAYOUT: SavedLayout = [
-  { i: 'notes', x: 0, y: 0, w: 2, h: 3 },
-  { i: 'pomodoro', x: 2, y: 0, w: 2, h: 3 },
-  { i: 'counter', x: 0, y: 3, w: 2, h: 2 },
-];
 
+function manifestTrustedOrigin(url: string): string | undefined {
+  if (!url.startsWith('http://') && !url.startsWith('https://')) return undefined;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Main dashboard container (Phase 2: OS Shell).
+ *
+ * Architecture:
+ * - Data Layer: `useWidgetCatalog` manages registry and active status.
+ * - Layout Layer: `useDashboardLayout` manages grid state.
+ * - Automation Layer: `useAutomationRuntime` executes cross-widget wires.
+ * - Presentation: Composes OS-level overlays (Studio, Monitor, Notifications).
+ */
 export default function GridDashboard() {
+  // --- Local UI State ---
   const [isEditing, setIsEditing] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [layout, setLayout] = useState<SavedLayout>(DEFAULT_LAYOUT);
+  const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
+  const [isAutomationOpen, setIsAutomationOpen] = useState(false);
+  const [isMonitorOpen, setIsMonitorOpen] = useState(false);
+  const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
 
-  // Hydrate client-side data after mount
+  // --- Data & Logic Hooks ---
+  const {
+    catalog,
+    error: catalogError,
+    installedRecords,
+    activeWidgets,
+    manifestMap,
+    installedById,
+    setError: setCatalogError,
+  } = useWidgetCatalog();
+
+  const { layout, handleLayoutChange, resetLayout } = useDashboardLayout(activeWidgets);
+  
+  // Initialize the automation execution engine
+  useAutomationRuntime();
+
   useEffect(() => {
-    setIsClient(true);
+    syncKernelManifests(catalog?.widgets ?? []);
+  }, [catalog]);
+
+  // --- Side Effects ---
+
+  // Persist theme
+  useEffect(() => {
     try {
       const savedTheme = localStorage.getItem('myboard.theme');
       if (savedTheme) setTheme(savedTheme as 'light' | 'dark');
-
-      const savedLayout = localStorage.getItem(STORAGE_KEY);
-      if (savedLayout) setLayout(JSON.parse(savedLayout) as SavedLayout);
-    } catch {
-      // ignore storage errors
-    }
+    } catch { /* ignore */ }
   }, []);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only trigger shortcuts when not typing in inputs or custom elements
-      const target = e.target as HTMLElement;
-      const isTyping = target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.contentEditable === 'true' ||
-        target.closest('.slot__webc') !== null; // Inside any widget
-
-      if (isTyping) return;
-
-      // Toggle edit mode with 'Shift+E' key
-      if (e.key === 'E' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        setIsEditing(prev => !prev);
-      }
-      // Reset layout with 'Shift+R' key
-      if (e.key === 'R' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        setLayout(DEFAULT_LAYOUT);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(layout)); } catch { /* ignore */ }
-  }, [layout]);
-
-  // Apply theme to document
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try {
@@ -84,77 +92,102 @@ export default function GridDashboard() {
     } catch { /* ignore */ }
   }, [theme]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isTyping =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true' ||
+        target.closest('.slot__webc') !== null;
+
+      if (isTyping) return;
+
+      if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key === 'E') { e.preventDefault(); setIsEditing(p => !p); }
+        if (e.key === 'R') { e.preventDefault(); resetLayout(); }
+        if (e.key === 'M') { e.preventDefault(); setIsMarketplaceOpen(p => !p); }
+        if (e.key === 'A') { e.preventDefault(); setIsAutomationOpen(p => !p); }
+        if (e.key === 'Escape') { e.preventDefault(); setIsMonitorOpen(p => !p); }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [resetLayout]);
+
+  // Register Host Bridge
+  useEffect(() => {
+    registerHostBridge({
+      ...runtimeKernel.bridge,
+      requestHostCapability: (permission: WidgetPermission, widgetId?: string) => {
+        if (!widgetId) return false;
+        const manifest = manifestMap.get(widgetId);
+        const decision = canRequestCapability(manifest, permission);
+        return decision.allowed;
+      },
+      getWidgetSettings: <T,>(widgetId: string) =>
+        installedById.get(widgetId)?.settings as T | undefined,
+      setWidgetSettings: <T,>(widgetId: string, settings: T) =>
+        widgetInstallStore.updateSettings(widgetId, settings as Record<string, unknown>),
+    });
+  }, [installedById, manifestMap]);
+
+  // --- Computed Views ---
+
   const items = useMemo(() => {
-    const map = new Map(layout.map((l) => [l.i, l] as const));
-    return WIDGETS.map((w) => ({ w, l: map.get(w.id) }));
-  }, [layout]);
+    const map = new Map(layout.map((entry) => [entry.i, entry] as const));
+    return activeWidgets.map((widget) => ({ widget, layout: map.get(widget.id) }));
+  }, [activeWidgets, layout]);
 
-  const handleLayoutChange = useCallback((current: unknown, allLayouts: any) => {
-    const nextLayout = (allLayouts?.lg as SavedLayout) ?? (current as SavedLayout);
-    setLayout(nextLayout);
-
-    if (process.env.NODE_ENV !== 'production') {
-      console.debug('[GridDashboard] layout changed', nextLayout);
-    }
-  }, []);
-
-  const toggleEditing = () => setIsEditing(prev => !prev);
-  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  const resetLayout = () => setLayout(DEFAULT_LAYOUT);
   const gridClassName = isEditing ? 'rgl rgl--editing' : 'rgl';
+
+  const selectedManifest = settingsWidgetId ? manifestMap.get(settingsWidgetId) ?? null : null;
+  const selectedSettings = settingsWidgetId
+    ? (installedById.get(settingsWidgetId)?.settings ?? {})
+    : {};
+
+  // --- Handlers ---
+
+  const handleInstall = (manifest: WidgetManifest) => {
+    const result = widgetInstallStore.install(manifest);
+    if (!result.ok) {
+      setCatalogError(`${result.code}: ${result.reason}`);
+      return;
+    }
+    setCatalogError(null);
+  };
+
+  const handleSaveSettings = (settings: Record<string, unknown>) => {
+    if (!settingsWidgetId) return;
+    widgetInstallStore.updateSettings(settingsWidgetId, settings);
+    eventBus.publish('host', 'settings-updated', {
+      widgetId: settingsWidgetId,
+      settings,
+    });
+  };
 
   return (
     <main className="wrap">
-      <div className="topbar">
-        <div className="topbar__content">
-          <div className="topbar__brand">
-            <h1 className="brand__title">MyBoard</h1>
-            <span className="brand__subtitle">Your modular productivity dashboard</span>
-          </div>
-          <div className="topbar__center">
-            <span className="topbar__mode">
-              {isEditing ? 'Edit Mode' : 'View Mode'}
-              {!isEditing && (
-                <span className="keyboard-hint">
-                  Press <kbd>Shift</kbd>+<kbd>E</kbd> to edit
-                </span>
-              )}
-            </span>
-          </div>
-          <div className="topbar__actions">
-            <button
-              onClick={toggleTheme}
-              className="btn--ghost"
-              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? '🌙' : '☀️'}
-            </button>
-            <button
-              onClick={toggleEditing}
-              className={isEditing ? 'btn--primary' : 'btn--ghost'}
-              title={isEditing ? 'Exit edit mode' : 'Enter edit mode (Shift+E)'}
-            >
-              {isEditing ? 'Done' : 'Edit Layout'}
-            </button>
-            <button
-              onClick={resetLayout}
-              className="btn--ghost"
-              title="Reset layout (Shift+R)"
-            >
-              Reset
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        theme={theme}
+        isEditing={isEditing}
+        onToggleTheme={() => setTheme((p) => (p === 'light' ? 'dark' : 'light'))}
+        onToggleEdit={() => setIsEditing((p) => !p)}
+        onResetLayout={resetLayout}
+        onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+        onOpenAutomation={() => setIsAutomationOpen(true)}
+        onOpenMonitor={() => setIsMonitorOpen(true)}
+      />
 
       <ResponsiveGridLayout
         className={gridClassName}
         breakpoints={GRID_BREAKPOINTS}
         cols={GRID_COLUMNS}
         rowHeight={100}
-        isDraggable={isEditing}
-        isResizable={isEditing}
+        isDraggable={isEditing && !isAutomationOpen}
+        isResizable={isEditing && !isAutomationOpen}
         margin={[16, 16]}
         layouts={{ lg: layout, md: layout, sm: layout }}
         onLayoutChange={handleLayoutChange}
@@ -162,20 +195,67 @@ export default function GridDashboard() {
         compactType={null}
         preventCollision={false}
       >
-        {items.map(({ w, l }) => (
+        {items.map(({ widget, layout: itemLayout }) => (
           <div
-            key={w.id}
+            key={widget.id}
             className="grid-item"
-            data-grid={{ i: w.id, x: l?.x ?? 0, y: l?.y ?? 0, w: l?.w ?? 2, h: l?.h ?? 3, minH: 2 }}
+            data-widget-id={widget.id}
+            data-grid={{
+              i: widget.id,
+              x: itemLayout?.x ?? 0,
+              y: itemLayout?.y ?? 0,
+              w: itemLayout?.w ?? 2,
+              h: itemLayout?.h ?? 3,
+              minH: widget.layoutDefaults?.minH ?? 2,
+              minW: widget.layoutDefaults?.minW ?? 1,
+            }}
           >
-            <WidgetSlot id={w.id} title={w.title} tag={w.tag} url={w.url} />
+            <SafeWidgetSlot
+              id={widget.id}
+              title={widget.title}
+              tag={widget.tag}
+              url={widget.url}
+              integrity={widget.integrity}
+              trustedOrigin={manifestTrustedOrigin(widget.url)}
+            />
           </div>
         ))}
       </ResponsiveGridLayout>
+
+      <WidgetMarketplace
+        isOpen={isMarketplaceOpen}
+        catalog={catalog}
+        installedRecords={installedRecords}
+        errorMessage={catalogError ?? undefined}
+        onClose={() => setIsMarketplaceOpen(false)}
+        onInstall={handleInstall}
+        onUninstall={(id) => widgetInstallStore.uninstall(id)}
+        onToggleEnabled={(id, enabled) => widgetInstallStore.setEnabled(id, enabled)}
+        onOpenSettings={(id) => setSettingsWidgetId(id)}
+      />
+
+      <WidgetSettingsPanel
+        manifest={selectedManifest}
+        initialSettings={selectedSettings as Record<string, unknown>}
+        onClose={() => setSettingsWidgetId(null)}
+        onSave={handleSaveSettings}
+      />
+
+      <AutomationStudio 
+        isOpen={isAutomationOpen} 
+        activeWidgets={activeWidgets} 
+        onClose={() => setIsAutomationOpen(false)} 
+      />
+
+      <SystemMonitor 
+        isOpen={isMonitorOpen} 
+        activeWidgets={activeWidgets} 
+        onClose={() => setIsMonitorOpen(false)} 
+      />
+
+      <NotificationHub />
 
       <DebugPanel />
     </main>
   );
 }
-
-
