@@ -5,7 +5,7 @@ export type WidgetConfigEntry = {
   url: string;
 };
 
-export const WIDGETS: ReadonlyArray<WidgetConfigEntry> = [
+export const CORE_WIDGETS: ReadonlyArray<WidgetConfigEntry> = [
   {
     id: 'notes',
     title: 'Notes',
@@ -24,4 +24,12 @@ export const WIDGETS: ReadonlyArray<WidgetConfigEntry> = [
     tag: 'mb-counter',
     url: '/widgets/mb-counter.js',
   },
+  {
+    id: 'taskboard',
+    title: 'Task Board',
+    tag: 'mb-taskboard',
+    url: '/widgets/mb-taskboard.js',
+  },
 ];
+
+export const WIDGETS = CORE_WIDGETS;

@@ -49,22 +49,52 @@ export default function DebugPanel() {
     useEffect(() => {
         if (!isOpen) return;
 
-        // We'll track events by subscribing to common widget events
         const unsubscribers: (() => void)[] = [];
+        const subscriptions: Array<[string, string]> = [
+            ['notes', 'note-added'],
+            ['notes', 'note-updated'],
+            ['notes', 'note-deleted'],
+            ['pomodoro', 'session-completed'],
+            ['taskboard', 'task-created'],
+            ['taskboard', 'task-moved'],
+            ['taskboard', 'task-completed'],
+        ];
 
-        // Subscribe to notes events as an example
-        const noteAddedUnsub = eventBus.subscribe('notes', 'note-added', (event) => {
-            setEvents((prev) => [event, ...prev].slice(0, MAX_EVENTS));
+        subscriptions.forEach(([widgetId, eventType]) => {
+            const unsubscribe = eventBus.subscribe(widgetId, eventType, (event) => {
+                setEvents((prev) => [event, ...prev].slice(0, MAX_EVENTS));
+            });
+            unsubscribers.push(unsubscribe);
         });
 
-        const noteDeletedUnsub = eventBus.subscribe('notes', 'note-deleted', (event) => {
-            setEvents((prev) => [event, ...prev].slice(0, MAX_EVENTS));
+        const hostEvents = [
+            'widget-installed',
+            'widget-updated',
+            'widget-uninstalled',
+            'widget-install-failed',
+        ] as const;
+        const hostHandlers = hostEvents.map((eventName) => {
+            const handler = (event: Event) => {
+                const custom = event as CustomEvent;
+                setEvents((prev) => [
+                    {
+                        widgetId: 'host',
+                        type: eventName,
+                        data: custom.detail,
+                        timestamp: Date.now(),
+                    },
+                    ...prev,
+                ].slice(0, MAX_EVENTS));
+            };
+            window.addEventListener(eventName, handler as EventListener);
+            return { eventName, handler };
         });
-
-        unsubscribers.push(noteAddedUnsub, noteDeletedUnsub);
 
         return () => {
             unsubscribers.forEach((unsub) => unsub());
+            hostHandlers.forEach(({ eventName, handler }) => {
+                window.removeEventListener(eventName, handler as EventListener);
+            });
         };
     }, [isOpen]);
 
@@ -150,9 +180,9 @@ export default function DebugPanel() {
                     </div>
 
                     <div className={styles.section}>
-                        <h4>Sample Events (Notes Widget)</h4>
+                        <h4>Sample Events (Notes/Pomodoro/Taskboard)</h4>
                         {events.length === 0 ? (
-                            <p className={styles.empty}>Add or delete notes to see events</p>
+                            <p className={styles.empty}>Interact with widgets to see events</p>
                         ) : (
                             <div className={styles.eventList}>
                                 {events.map((event, idx) => (
