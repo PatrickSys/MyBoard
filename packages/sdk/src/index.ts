@@ -18,15 +18,37 @@ export type {
 } from './types';
 
 export type { WidgetEvent } from './event-bus';
+export type {
+  WidgetCatalogResponse,
+  WidgetInstallRecord,
+  WidgetManifest,
+  WidgetAutomationSchema,
+  WidgetAutomationEventDefinition,
+  WidgetAutomationActionDefinition,
+  WidgetPermission,
+  WidgetSettingsField,
+  WidgetSettingsSchema,
+} from './widget-manifest';
+export type { WidgetCommandResult, WidgetCommandRequest } from './host-bridge';
 
 // Import types for internal use
 import type { WidgetChange, WidgetErrorDetail } from './types';
+import { eventBus } from './event-bus';
 
 // Event bus for widget-to-widget communication
 export { eventBus } from './event-bus';
+export * from './events';
 
 // Centralized state management
 export { widgetStore } from './widget-store';
+export {
+  dispatchWidgetCommand,
+  getWidgetSettings,
+  registerWidgetCommandHandler,
+  registerHostBridge,
+  requestHostCapability,
+  setWidgetSettings,
+} from './host-bridge';
 
 /**
  * Emit when widget has successfully mounted and is ready to use.
@@ -58,4 +80,20 @@ export function emitChange<T = unknown>(
   target.dispatchEvent(
     new CustomEvent(WIDGET_CHANGE, { bubbles: true, detail })
   );
+}
+
+export type HostNotification = {
+  level: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  message?: string;
+  sourceWidgetId?: string;
+  timestamp?: number;
+  code?: string;
+};
+
+export function notifyHost(notification: HostNotification): void {
+  eventBus.publish('system', 'notification', {
+    ...notification,
+    timestamp: notification.timestamp ?? Date.now(),
+  });
 }

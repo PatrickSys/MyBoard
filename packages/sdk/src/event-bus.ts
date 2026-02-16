@@ -1,3 +1,5 @@
+import { shouldPublishEvent } from './host-bridge';
+
 /**
  * Lightweight event bus for widget-to-widget communication.
  *
@@ -28,6 +30,10 @@ class EventBus {
             data,
             timestamp: Date.now(),
         };
+
+        if (!shouldPublishEvent(event as WidgetEvent<unknown>)) {
+            return;
+        }
 
         // Namespace prevents collisions: 'notes:added' vs 'todos:added'
         const namespacedType = `${widgetId}:${eventType}`;
