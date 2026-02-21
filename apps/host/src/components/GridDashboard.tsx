@@ -2,13 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
+import { registerHostBridge } from '@myboard/sdk';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import WidgetSlot from './WidgetSlot';
 import DebugPanel from './DebugPanel';
 import { WIDGETS } from '../config/widgets';
+import { runtimeKernel } from '../lib/runtime-kernel-singleton';
 
 const ResponsiveGridLayout = WidthProvider(Responsive as any);
+registerHostBridge(runtimeKernel.bridge);
 
 type SavedLayout = { i: string; x: number; y: number; w: number; h: number }[];
 

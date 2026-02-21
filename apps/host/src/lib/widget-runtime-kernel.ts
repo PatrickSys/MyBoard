@@ -42,6 +42,13 @@ type KernelEventDetail =
       code: string;
       reason: string;
       timestamp: number;
+    }
+  | {
+      type: 'event-blocked';
+      widgetId: string;
+      code: string;
+      reason: string;
+      timestamp: number;
     };
 
 type RuntimeKernelOptions = {
@@ -124,11 +131,8 @@ export function createRuntimeKernel(options: RuntimeKernelOptions) {
 
     const decision = governor.canPublish(event.widgetId);
     if (!decision.allowed) {
-      if (FEATURE_FLAGS.telemetryEnabled) {
-        telemetry.recordError(event.widgetId, event.timestamp);
-      }
       emitKernelEvent({
-        type: 'command-failed',
+        type: 'event-blocked',
         widgetId: event.widgetId,
         code: decision.code,
         reason: decision.reason,

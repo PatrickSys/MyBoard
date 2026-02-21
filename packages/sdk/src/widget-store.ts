@@ -4,6 +4,7 @@
  * Provides framework-agnostic state persistence with localStorage backing.
  * Widgets can store state, subscribe to changes, and avoid managing their own persistence.
  */
+import { getSharedSdkRuntime } from './shared-runtime';
 
 type StateChangeCallback<T = unknown> = (state: T) => void;
 
@@ -142,4 +143,13 @@ class WidgetStore {
 /**
  * Global widget store instance.
  */
-export const widgetStore = new WidgetStore();
+const sharedRuntime = getSharedSdkRuntime();
+const widgetStoreInstance =
+  (sharedRuntime.instances.get('widget-store') as WidgetStore | undefined) ??
+  new WidgetStore();
+
+if (!sharedRuntime.instances.has('widget-store')) {
+  sharedRuntime.instances.set('widget-store', widgetStoreInstance);
+}
+
+export const widgetStore = widgetStoreInstance;

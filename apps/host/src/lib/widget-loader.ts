@@ -6,11 +6,14 @@ const failures = new Map<string, { count: number; blockedUntil: number }>();
 const MAX_FAILURES = 3;
 const CIRCUIT_MS = 15000;
 
-function injectModuleScript(url: string): HTMLScriptElement {
+function injectModuleScript(url: string, integrity?: string): HTMLScriptElement {
   const script = document.createElement('script');
   script.type = 'module';
   script.src = url;
   script.crossOrigin = 'anonymous';
+  if (integrity) {
+    script.integrity = integrity;
+  }
   document.head.appendChild(script);
   return script;
 }
@@ -56,11 +59,7 @@ export function ensureLoaded(url: string, options: EnsureLoadedOptions = {}): Pr
       reject(new Error('load-timeout'));
     }, timeoutMs);
 
-    const script = injectModuleScript(url);
-    if (options.integrity) {
-      script.integrity = options.integrity;
-      script.crossOrigin = 'anonymous';
-    }
+    const script = injectModuleScript(url, options.integrity);
 
     script.addEventListener('load', () => {
       if (settled) return;

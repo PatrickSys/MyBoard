@@ -27,7 +27,7 @@ export default function WidgetSlot({ id, tag, url, title }: Props) {
     // Start performance tracking
     performanceTracker.startTracking(id);
 
-    ensureLoaded(url)
+    ensureLoaded(url, { widgetId: id, expectedTag: tag })
       .catch((err: unknown) => {
         if (!cancelled) {
           setStatus('error');

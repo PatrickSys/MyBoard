@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import WidgetSlot from '../src/components/WidgetSlot';
 import * as widgetLoader from '../src/lib/widget-loader';
@@ -33,7 +33,10 @@ describe('WidgetSlot', () => {
     it('should call ensureLoaded with correct URL', () => {
         render(<WidgetSlot id="test" tag="test-widget" url="/test.js" />);
 
-        expect(mockEnsureLoaded).toHaveBeenCalledWith('/test.js');
+        expect(mockEnsureLoaded).toHaveBeenCalledWith('/test.js', {
+            widgetId: 'test',
+            expectedTag: 'test-widget',
+        });
     });
 
     it('should show error state when widget load fails', async () => {
@@ -42,7 +45,7 @@ describe('WidgetSlot', () => {
         render(<WidgetSlot id="test" tag="test-widget" url="/test.js" title="Test" />);
 
         await waitFor(() => {
-            expect(screen.getByText(/Failed to load/)).toBeInTheDocument();
+            expect(screen.getByTitle('Failed to load')).toBeInTheDocument();
         });
 
         expect(performanceTracker.markError).toHaveBeenCalledWith('test');
@@ -62,7 +65,9 @@ describe('WidgetSlot', () => {
         // Simulate widget-ready event
         const widgetElement = container.querySelector('test-widget');
         const event = new CustomEvent('widget-ready', { bubbles: true });
-        widgetElement?.dispatchEvent(event);
+        act(() => {
+            widgetElement?.dispatchEvent(event);
+        });
 
         await waitFor(() => {
             expect(screen.getByText('ready')).toBeInTheDocument();
@@ -86,10 +91,12 @@ describe('WidgetSlot', () => {
             bubbles: true,
             detail: { reason: 'mount-error' },
         });
-        widgetElement?.dispatchEvent(event);
+        act(() => {
+            widgetElement?.dispatchEvent(event);
+        });
 
         await waitFor(() => {
-            expect(screen.getByText('mount-error')).toBeInTheDocument();
+            expect(screen.getByTitle('mount-error')).toBeInTheDocument();
         });
 
         expect(performanceTracker.markError).toHaveBeenCalledWith('test');
@@ -101,10 +108,12 @@ describe('WidgetSlot', () => {
         render(<WidgetSlot id="test" tag="test-widget" url="/test.js" title="Test" />);
 
         // Fast-forward past the timeout
-        jest.advanceTimersByTime(10000);
+        act(() => {
+            jest.advanceTimersByTime(10000);
+        });
 
         await waitFor(() => {
-            expect(screen.getByText('ready-timeout')).toBeInTheDocument();
+            expect(screen.getByTitle('ready-timeout')).toBeInTheDocument();
         });
 
         jest.useRealTimers();

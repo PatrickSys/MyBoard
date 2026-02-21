@@ -6,6 +6,6 @@ export const FEATURE_FLAGS = {
   commandBusEnabled: true,
   telemetryEnabled: true,
   monitorPollingEnabled: true,
-  cspReportOnlyEnabled: true,
+  cspReportOnlyEnabled: false,
 } as const;
 

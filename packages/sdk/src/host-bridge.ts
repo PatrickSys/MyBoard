@@ -1,6 +1,7 @@
 import type { WidgetPermission } from './widget-manifest';
 import { widgetStore } from './widget-store';
 import type { WidgetEvent } from './event-bus';
+import { getSharedSdkRuntime } from './shared-runtime';
 
 type HostBridge = {
   requestHostCapability?: (
@@ -46,19 +47,27 @@ type WidgetCommandHandler = (
   request: WidgetCommandRequest
 ) => WidgetCommandResult | Promise<WidgetCommandResult>;
 
-let bridge: HostBridge = {};
-const commandHandlers = new Map<string, WidgetCommandHandler>();
+const sharedRuntime = getSharedSdkRuntime();
 
 const settingsStateKey = (widgetId: string) => `${widgetId}:settings`;
 
+function getBridge(): HostBridge {
+  return sharedRuntime.bridge as HostBridge;
+}
+
+function getCommandHandlers(): Map<string, WidgetCommandHandler> {
+  return sharedRuntime.commandHandlers as Map<string, WidgetCommandHandler>;
+}
+
 export function registerHostBridge(nextBridge: HostBridge): void {
-  bridge = nextBridge;
+  sharedRuntime.bridge = nextBridge;
 }
 
 export async function requestHostCapability(
   permission: WidgetPermission,
   widgetId?: string
 ): Promise<boolean> {
+  const bridge = getBridge();
   if (!bridge.requestHostCapability) {
     return permission === 'storage' || permission === 'events';
   }
@@ -66,6 +75,7 @@ export async function requestHostCapability(
 }
 
 export function getWidgetSettings<T = unknown>(widgetId: string): T | undefined {
+  const bridge = getBridge();
   if (bridge.getWidgetSettings) {
     return bridge.getWidgetSettings<T>(widgetId);
   }
@@ -73,6 +83,7 @@ export function getWidgetSettings<T = unknown>(widgetId: string): T | undefined 
 }
 
 export function setWidgetSettings<T = unknown>(widgetId: string, settings: T): void {
+  const bridge = getBridge();
   if (bridge.setWidgetSettings) {
     bridge.setWidgetSettings(widgetId, settings);
     return;
@@ -81,10 +92,14 @@ export function setWidgetSettings<T = unknown>(widgetId: string, settings: T): v
 }
 
 export function shouldPublishEvent(event: WidgetEvent<unknown>): boolean {
+  const bridge = getBridge();
   if (!bridge.beforePublishEvent) return true;
   try {
     return bridge.beforePublishEvent(event);
-  } catch {
+  } catch (error) {
+    if (typeof process === 'undefined' || process.env?.NODE_ENV !== 'production') {
+      console.warn('[host-bridge] beforePublishEvent failed; dropping event', error);
+    }
     return false;
   }
 }
@@ -93,10 +108,12 @@ export function registerWidgetCommandHandler(
   widgetId: string,
   handler: WidgetCommandHandler
 ): () => void {
+  const bridge = getBridge();
   if (bridge.registerWidgetCommandHandler) {
     return bridge.registerWidgetCommandHandler(widgetId, handler);
   }
 
+  const commandHandlers = getCommandHandlers();
   commandHandlers.set(widgetId, handler);
   return () => {
     if (commandHandlers.get(widgetId) === handler) {
@@ -108,10 +125,12 @@ export function registerWidgetCommandHandler(
 export async function dispatchWidgetCommand(
   request: WidgetCommandRequest
 ): Promise<WidgetCommandResult> {
+  const bridge = getBridge();
   if (bridge.dispatchWidgetCommand) {
     return bridge.dispatchWidgetCommand(request);
   }
 
+  const commandHandlers = getCommandHandlers();
   const handler = commandHandlers.get(request.targetWidgetId);
   if (!handler) {
     return {

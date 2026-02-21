@@ -106,8 +106,8 @@ export class WidgetCommandRouter {
 
     this.seenCommands.set(request.commandId, now);
 
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const timeoutPromise = new Promise<WidgetCommandResult>((resolve) => {
         timeoutId = globalThis.setTimeout(
           () =>
@@ -121,9 +121,6 @@ export class WidgetCommandRouter {
       });
 
       const result = await Promise.race([Promise.resolve(handler(request)), timeoutPromise]);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
       return result;
     } catch (error) {
       return {
@@ -131,6 +128,10 @@ export class WidgetCommandRouter {
         code: 'COMMAND_HANDLER_ERROR',
         reason: error instanceof Error ? error.message : 'unknown-handler-error',
       };
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     }
   }
 
