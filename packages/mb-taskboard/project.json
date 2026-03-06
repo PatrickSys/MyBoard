@@ -1,0 +1,17 @@
+{
+  "name": "@myboard/mb-taskboard",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/mb-taskboard/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/apps/host/public/widgets/mb-taskboard.js"],
+      "options": {
+        "command": "pnpm exec vite build",
+        "cwd": "packages/mb-taskboard"
+      }
+    }
+  },
+  "tags": ["widget"]
+}

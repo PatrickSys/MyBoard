@@ -18,7 +18,10 @@ import NotificationHub from './NotificationHub';
 
 import { widgetInstallStore } from '../lib/widget-install-store';
 import { canRequestCapability } from '../lib/widget-policy';
-import { runtimeKernel, syncKernelManifests } from '../lib/runtime-kernel-singleton';
+import {
+  runtimeKernel,
+  syncKernelManifests,
+} from '../lib/runtime-kernel-singleton';
 import { useWidgetCatalog } from '../hooks/useWidgetCatalog';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { useAutomationRuntime } from '../hooks/useAutomationRuntime';
@@ -29,7 +32,8 @@ const GRID_BREAKPOINTS = { lg: 1200, md: 900, sm: 0 } as const;
 const GRID_COLUMNS = { lg: 4, md: 2, sm: 1 } as const;
 
 function manifestTrustedOrigin(url: string): string | undefined {
-  if (!url.startsWith('http://') && !url.startsWith('https://')) return undefined;
+  if (!url.startsWith('http://') && !url.startsWith('https://'))
+    return undefined;
   try {
     return new URL(url).origin;
   } catch {
@@ -66,8 +70,9 @@ export default function GridDashboard() {
     setError: setCatalogError,
   } = useWidgetCatalog();
 
-  const { layout, handleLayoutChange, resetLayout } = useDashboardLayout(activeWidgets);
-  
+  const { layout, handleLayoutChange, resetLayout } =
+    useDashboardLayout(activeWidgets);
+
   // Initialize the automation execution engine
   useAutomationRuntime();
 
@@ -82,14 +87,18 @@ export default function GridDashboard() {
     try {
       const savedTheme = localStorage.getItem('myboard.theme');
       if (savedTheme) setTheme(savedTheme as 'light' | 'dark');
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try {
       localStorage.setItem('myboard.theme', theme);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [theme]);
 
   // Keyboard shortcuts
@@ -105,11 +114,26 @@ export default function GridDashboard() {
       if (isTyping) return;
 
       if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        if (e.key === 'E') { e.preventDefault(); setIsEditing(p => !p); }
-        if (e.key === 'R') { e.preventDefault(); resetLayout(); }
-        if (e.key === 'M') { e.preventDefault(); setIsMarketplaceOpen(p => !p); }
-        if (e.key === 'A') { e.preventDefault(); setIsAutomationOpen(p => !p); }
-        if (e.key === 'Escape') { e.preventDefault(); setIsMonitorOpen(p => !p); }
+        if (e.key === 'E') {
+          e.preventDefault();
+          setIsEditing((p) => !p);
+        }
+        if (e.key === 'R') {
+          e.preventDefault();
+          resetLayout();
+        }
+        if (e.key === 'M') {
+          e.preventDefault();
+          setIsMarketplaceOpen((p) => !p);
+        }
+        if (e.key === 'A') {
+          e.preventDefault();
+          setIsAutomationOpen((p) => !p);
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setIsMonitorOpen((p) => !p);
+        }
       }
     };
 
@@ -117,11 +141,14 @@ export default function GridDashboard() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [resetLayout]);
 
-  // Register Host Bridge
+  // Register Host Bridge and push canonical settings into mounted widgets.
   useEffect(() => {
     registerHostBridge({
       ...runtimeKernel.bridge,
-      requestHostCapability: (permission: WidgetPermission, widgetId?: string) => {
+      requestHostCapability: (
+        permission: WidgetPermission,
+        widgetId?: string
+      ) => {
         if (!widgetId) return false;
         const manifest = manifestMap.get(widgetId);
         const decision = canRequestCapability(manifest, permission);
@@ -130,22 +157,37 @@ export default function GridDashboard() {
       getWidgetSettings: <T,>(widgetId: string) =>
         installedById.get(widgetId)?.settings as T | undefined,
       setWidgetSettings: <T,>(widgetId: string, settings: T) =>
-        widgetInstallStore.updateSettings(widgetId, settings as Record<string, unknown>),
+        widgetInstallStore.updateSettings(
+          widgetId,
+          settings as Record<string, unknown>
+        ),
     });
+
+    for (const [widgetId, record] of installedById.entries()) {
+      eventBus.publish('host', 'settings-updated', {
+        widgetId,
+        settings: record.settings ?? {},
+      });
+    }
   }, [installedById, manifestMap]);
 
   // --- Computed Views ---
 
   const items = useMemo(() => {
     const map = new Map(layout.map((entry) => [entry.i, entry] as const));
-    return activeWidgets.map((widget) => ({ widget, layout: map.get(widget.id) }));
+    return activeWidgets.map((widget) => ({
+      widget,
+      layout: map.get(widget.id),
+    }));
   }, [activeWidgets, layout]);
 
   const gridClassName = isEditing ? 'rgl rgl--editing' : 'rgl';
 
-  const selectedManifest = settingsWidgetId ? manifestMap.get(settingsWidgetId) ?? null : null;
+  const selectedManifest = settingsWidgetId
+    ? manifestMap.get(settingsWidgetId) ?? null
+    : null;
   const selectedSettings = settingsWidgetId
-    ? (installedById.get(settingsWidgetId)?.settings ?? {})
+    ? installedById.get(settingsWidgetId)?.settings ?? {}
     : {};
 
   // --- Handlers ---
@@ -173,7 +215,9 @@ export default function GridDashboard() {
       <DashboardHeader
         theme={theme}
         isEditing={isEditing}
-        onToggleTheme={() => setTheme((p) => (p === 'light' ? 'dark' : 'light'))}
+        onToggleTheme={() =>
+          setTheme((p) => (p === 'light' ? 'dark' : 'light'))
+        }
         onToggleEdit={() => setIsEditing((p) => !p)}
         onResetLayout={resetLayout}
         onOpenMarketplace={() => setIsMarketplaceOpen(true)}
@@ -230,7 +274,9 @@ export default function GridDashboard() {
         onClose={() => setIsMarketplaceOpen(false)}
         onInstall={handleInstall}
         onUninstall={(id) => widgetInstallStore.uninstall(id)}
-        onToggleEnabled={(id, enabled) => widgetInstallStore.setEnabled(id, enabled)}
+        onToggleEnabled={(id, enabled) =>
+          widgetInstallStore.setEnabled(id, enabled)
+        }
         onOpenSettings={(id) => setSettingsWidgetId(id)}
       />
 
@@ -241,16 +287,16 @@ export default function GridDashboard() {
         onSave={handleSaveSettings}
       />
 
-      <AutomationStudio 
-        isOpen={isAutomationOpen} 
-        activeWidgets={activeWidgets} 
-        onClose={() => setIsAutomationOpen(false)} 
+      <AutomationStudio
+        isOpen={isAutomationOpen}
+        activeWidgets={activeWidgets}
+        onClose={() => setIsAutomationOpen(false)}
       />
 
-      <SystemMonitor 
-        isOpen={isMonitorOpen} 
-        activeWidgets={activeWidgets} 
-        onClose={() => setIsMonitorOpen(false)} 
+      <SystemMonitor
+        isOpen={isMonitorOpen}
+        activeWidgets={activeWidgets}
+        onClose={() => setIsMonitorOpen(false)}
       />
 
       <NotificationHub />
