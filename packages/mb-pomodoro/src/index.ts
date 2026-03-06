@@ -1,5 +1,5 @@
 import { LitElement, css, html } from 'lit';
-import { emitReady, emitError, eventBus } from '@myboard/sdk';
+import { emitReady, eventBus } from '@myboard/sdk';
 
 type Phase = 'idle' | 'work' | 'break';
 
