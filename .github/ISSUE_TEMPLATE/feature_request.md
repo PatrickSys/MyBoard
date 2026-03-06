@@ -17,7 +17,7 @@ High-level approach, API/UX sketch, or examples.
 Other approaches you evaluated and why they’re not preferred.
 
 ## Impact / Scope
-Areas of the codebase affected (e.g., `apps/host`, `packages/widget-utils`).
+Areas of the codebase affected (e.g., `apps/host`, `packages/sdk`).
 
 ## Additional Context
 Links, prior art, or screenshots.

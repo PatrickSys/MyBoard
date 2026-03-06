@@ -1,5 +1,5 @@
 {
-  "name": "@myboard/widget-utils",
+  "name": "@myboard/sdk",
   "version": "0.0.0",
   "private": true,
   "type": "module",

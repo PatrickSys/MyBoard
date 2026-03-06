@@ -1,11 +1,15 @@
 import { LitElement, css, html } from 'lit';
-import { emitReady, emitError } from '@myboard/widget-utils';
+import { emitReady, eventBus } from '@myboard/sdk';
 
 type Phase = 'idle' | 'work' | 'break';
 
 export class MbPomodoroElement extends LitElement {
   static styles = css`
-    :host { display: block; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; height: 100%; }
+    :host {
+      display: block;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      height: 100%;
+    }
     .surface {
       height: 100%;
       background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
@@ -109,9 +113,16 @@ export class MbPomodoroElement extends LitElement {
   private tick = () => {
     this.remainingMs = Math.max(0, this.remainingMs - 1000);
     if (this.remainingMs === 0) {
+      const completedPhase = this.phase;
       this.stop();
       this.phase = this.phase === 'work' ? 'break' : 'work';
       this.remainingMs = this.phase === 'work' ? 25 * 60 * 1000 : 5 * 60 * 1000;
+
+      // Emit event when a work cycle completes
+      if (completedPhase === 'work') {
+        console.log('[Pomodoro] Publishing cycle-complete event');
+        eventBus.publish('pomodoro', 'cycle-complete', { timestamp: Date.now() });
+      }
     }
     this.requestUpdate();
   };
@@ -153,7 +164,10 @@ export class MbPomodoroElement extends LitElement {
 
   render() {
     const total = this.phase === 'break' ? 5 * 60 * 1000 : 25 * 60 * 1000;
-    const pct = Math.max(0, Math.min(100, 100 - Math.round((this.remainingMs / total) * 100)));
+    const pct = Math.max(
+      0,
+      Math.min(100, 100 - Math.round((this.remainingMs / total) * 100))
+    );
     return html`
       <div class="surface">
         <div class="row">
@@ -161,8 +175,12 @@ export class MbPomodoroElement extends LitElement {
           <div class="phase ${this.phase}">${this.phase}</div>
         </div>
         <div class="row">
-          <button @click=${() => this.start()} ?disabled=${!!this.intervalId}>Start</button>
-          <button @click=${() => this.pause()} ?disabled=${!this.intervalId}>Pause</button>
+          <button @click=${() => this.start()} ?disabled=${!!this.intervalId}>
+            Start
+          </button>
+          <button @click=${() => this.pause()} ?disabled=${!this.intervalId}>
+            Pause
+          </button>
           <button @click=${() => this.reset()}>Reset</button>
         </div>
         <div class="bar"><div style="width:${pct}%"></div></div>
@@ -174,7 +192,3 @@ export class MbPomodoroElement extends LitElement {
 if (!customElements.get('mb-pomodoro')) {
   customElements.define('mb-pomodoro', MbPomodoroElement);
 }
-
-
-
-

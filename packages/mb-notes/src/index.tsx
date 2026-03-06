@@ -1,34 +1,39 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { emitReady, emitError } from '@myboard/widget-utils';
+import { emitReady, emitError, widgetStore, eventBus } from '@myboard/sdk';
 
 type Note = { id: string; text: string };
 
+const WIDGET_ID = 'notes';
+
 function NotesApp() {
   const [notes, setNotes] = useState<Note[]>(() => {
-    try {
-      const s = localStorage.getItem('mb-notes');
-      return s ? (JSON.parse(s) as Note[]) : [];
-    } catch {
-      return [];
-    }
+    const stored = widgetStore.getState<Note[]>(WIDGET_ID);
+    return stored || [];
   });
   const [text, setText] = useState('');
 
   useEffect(() => {
-    try {
-      localStorage.setItem('mb-notes', JSON.stringify(notes));
-    } catch { }
+    widgetStore.setState(WIDGET_ID, notes);
   }, [notes]);
 
   const add = () => {
     const v = text.trim();
     if (!v) return;
-    setNotes((n) => [{ id: String(Date.now()), text: v }, ...n]);
+    const newNote = { id: String(Date.now()), text: v };
+    setNotes((n) => [newNote, ...n]);
     setText('');
+
+    // Publish event for other widgets
+    console.log('[Notes] Publishing note-added event:', newNote);
+    eventBus.publish(WIDGET_ID, 'note-added', { note: newNote });
   };
-  const del = (id: string) => setNotes((n) => n.filter((x) => x.id !== id));
+  const del = (id: string) => {
+    setNotes((n) => n.filter((x) => x.id !== id));
+    console.log('[Notes] Publishing note-deleted event:', id);
+    eventBus.publish(WIDGET_ID, 'note-deleted', { id });
+  };
 
   return (
     <div style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
@@ -178,7 +183,9 @@ class MbNotesElement extends HTMLElement {
     try {
       this.#root?.unmount();
       this.#root = null;
-    } catch { }
+    } catch {
+      // Unmount errors are expected during cleanup
+    }
   }
 }
 
