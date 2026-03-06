@@ -10,10 +10,12 @@ type Props = {
   id: string;
   tag: string;
   url: string;
+  integrity?: string;
+  trustedOrigin?: string;
   title?: string;
 };
 
-export default function WidgetSlot({ id, tag, url, title }: Props) {
+export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, title }: Props) {
   const hostRef = useRef<HTMLElement | null>(null);
   const [status, setStatus] = useState<SlotStatus>('loading');
   const [failReason, setFailReason] = useState<string | undefined>(undefined);
@@ -27,7 +29,7 @@ export default function WidgetSlot({ id, tag, url, title }: Props) {
     // Start performance tracking
     performanceTracker.startTracking(id);
 
-    ensureLoaded(url, { widgetId: id, expectedTag: tag })
+    ensureLoaded(url, { integrity, trustedOrigin, expectedTag: tag, widgetId: id })
       .catch((err: unknown) => {
         if (!cancelled) {
           setStatus('error');
@@ -38,7 +40,7 @@ export default function WidgetSlot({ id, tag, url, title }: Props) {
 
     console.debug(`[WidgetSlot] loading: ${tag} from ${url}`);
     return () => { cancelled = true; };
-  }, [url, id, tag]);
+  }, [url, id, tag, integrity, trustedOrigin]);
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
