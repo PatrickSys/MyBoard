@@ -1,14 +1,17 @@
-import path from 'path';
 import { defineConfig } from 'vite';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   build: {
     lib: {
-      entry: path.resolve(__dirname, 'src/index.ts'),
+      entry: resolve(__dirname, 'src/index.ts'),
       formats: ['es'],
       fileName: () => 'mb-pomodoro.js',
     },
-    outDir: '../../apps/host/public/widgets',
+    outDir: resolve(__dirname, '../../apps/host/public/widgets'),
     emptyOutDir: false,
     rollupOptions: {
       external: [],

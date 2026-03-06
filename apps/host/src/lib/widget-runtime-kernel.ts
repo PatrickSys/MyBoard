@@ -4,7 +4,7 @@ import type {
   WidgetManifest,
 } from '@myboard/sdk';
 import { canDispatchCommand } from './widget-policy';
-import { EventGovernor, eventGovernor } from './event-governor';
+import { EventGovernor } from './event-governor';
 import {
   widgetTelemetryService,
   type WidgetTelemetryService,
@@ -15,10 +15,7 @@ import {
   type WidgetHealth,
   type WidgetProcessManager,
 } from './widget-process-manager';
-import {
-  WidgetCommandRouter,
-  widgetCommandRouter,
-} from './widget-command-router';
+import { WidgetCommandRouter } from './widget-command-router';
 import { FEATURE_FLAGS } from '../config/feature-flags';
 
 export const KERNEL_EVENT = 'myboard:kernel-event';

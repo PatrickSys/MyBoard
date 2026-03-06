@@ -59,6 +59,7 @@ export default function WidgetSlot({ id, tag, url, title }: Props) {
         settled = true;
         setStatus('error');
         setFailReason('ready-timeout');
+        performanceTracker.markError(id);
       }
     }, 10000);
 
