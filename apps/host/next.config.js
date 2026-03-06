@@ -17,4 +17,13 @@ const plugins = [
   withNx,
 ];
 
-module.exports = composePlugins(...plugins)(nextConfig);
+function shouldUseNxPlugin() {
+  return Boolean(
+    process.env.NX_TASK_TARGET_PROJECT ||
+      process.env.NX_TASK_TARGET_TARGET ||
+      process.env.NX_WORKSPACE_ROOT ||
+      process.env.NX_CLI_SET
+  );
+}
+
+module.exports = shouldUseNxPlugin() ? composePlugins(...plugins)(nextConfig) : nextConfig;
