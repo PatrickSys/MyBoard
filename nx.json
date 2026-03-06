@@ -20,7 +20,6 @@
       "{workspaceRoot}/.github/workflows/ci.yml"
     ]
   },
-  "nxCloudId": "68bc3a75c4fb535f60bd19a7",
   "plugins": [
     {
       "plugin": "@nx/next/plugin",
