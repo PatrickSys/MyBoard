@@ -103,15 +103,17 @@ export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, tit
     <div className="slot">
       <div className="slot__hdr">
         <span className="slot__title">{title ?? tag}</span>
-        <span
-          className={`slot__badge slot__badge--${status}`}
-          aria-live="polite"
-          title={status === 'error' ? failReason : status}
-        >
-          <span className="slot__dot" />
-          {status === 'error' ? (failReason ?? 'error') : status}
-          {showLoadTime && ` (${loadTime.toFixed(0)}ms)`}
-        </span>
+        {(devMode || status !== 'ready') && (
+          <span
+            className={`slot__badge slot__badge--${status}`}
+            aria-live="polite"
+            title={status === 'error' ? failReason : status}
+          >
+            <span className="slot__dot" />
+            {status === 'error' ? (failReason ?? 'error') : status}
+            {showLoadTime && ` (${loadTime.toFixed(0)}ms)`}
+          </span>
+        )}
       </div>
       <div className="slot__body" data-status={status}>
         {status === 'loading' && <div className="slot__skeleton" />}
