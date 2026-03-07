@@ -86,11 +86,11 @@ export class MbTaskboardElement extends LitElement {
       background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
       border-radius: 16px;
       border: 1px solid rgba(14, 165, 233, 0.2);
-      padding: 16px;
+      padding: 12px;
       box-sizing: border-box;
       display: grid;
       grid-template-rows: auto auto 1fr;
-      gap: 12px;
+      gap: 8px;
       box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
     }
     .row {
@@ -109,9 +109,9 @@ export class MbTaskboardElement extends LitElement {
     select {
       border: 1px solid rgba(14, 165, 233, 0.3);
       border-radius: 10px;
-      padding: 8px 12px;
+      padding: 6px 10px;
       background: rgba(255, 255, 255, 0.9);
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       transition: border-color 0.2s;
     }
     input:focus,
@@ -126,10 +126,10 @@ export class MbTaskboardElement extends LitElement {
     .btn-primary {
       border: none;
       border-radius: 10px;
-      padding: 8px 16px;
+      padding: 6px 14px;
       background: #0284c7;
       color: #fff;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
@@ -154,21 +154,21 @@ export class MbTaskboardElement extends LitElement {
     .columns {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
+      gap: 8px;
       min-height: 0;
     }
     .column {
       border: 1px solid rgba(14, 165, 233, 0.15);
       border-radius: 12px;
       background: rgba(255, 255, 255, 0.4);
-      padding: 10px;
+      padding: 8px;
       display: flex;
       flex-direction: column;
       min-height: 0;
     }
     .column h4 {
-      margin: 0 0 10px 0;
-      font-size: 0.75rem;
+      margin: 0 0 6px 0;
+      font-size: 0.72rem;
       text-transform: uppercase;
       color: #0369a1;
       letter-spacing: 0.08em;
@@ -193,9 +193,9 @@ export class MbTaskboardElement extends LitElement {
       border: 1px solid rgba(14, 165, 233, 0.1);
       border-radius: 10px;
       background: #fff;
-      padding: 10px;
+      padding: 8px;
       display: grid;
-      gap: 6px;
+      gap: 4px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
       transition: transform 0.1s;
     }

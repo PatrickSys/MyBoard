@@ -271,38 +271,55 @@ function NotesApp() {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: 10,
+        gap: 8,
       }}
     >
-      <div className="note-input-row">
-        <input
-          className="note-input"
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') addNote();
-          }}
-          placeholder="Write a note"
-        />
-        <button className="note-btn" onClick={addNote}>
-          Add
-        </button>
+      {/* Compose area */}
+      <div className="compose-block">
+        <div className="note-input-row">
+          <textarea
+            className="note-textarea"
+            rows={2}
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            onInput={(event) => {
+              const el = event.currentTarget;
+              el.style.height = 'auto';
+              el.style.height = el.scrollHeight + 'px';
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                addNote();
+              }
+            }}
+            placeholder="Write a note… (Ctrl+Enter to add)"
+          />
+          <button className="note-btn" onClick={addNote}>
+            Add
+          </button>
+        </div>
+        <div className="tags-input-row">
+          <span className="tags-label">Tags:</span>
+          <input
+            className="note-input tags-input"
+            placeholder="comma separated"
+            value={tagsInput}
+            onChange={(event) => setTagsInput(event.target.value)}
+          />
+        </div>
       </div>
-      <input
-        className="note-input"
-        placeholder="Tags (comma separated)"
-        value={tagsInput}
-        onChange={(event) => setTagsInput(event.target.value)}
-      />
+
+      {/* Filter toolbar */}
       <div className="note-toolbar">
         <input
           className="note-input"
-          placeholder="Search notes"
+          placeholder="Search…"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
         <select
-          className="note-input"
+          className="note-input tag-select"
           value={activeTag}
           onChange={(event) => setActiveTag(event.target.value)}
         >
@@ -318,59 +335,71 @@ function NotesApp() {
             checked={showArchived}
             onChange={(event) => setShowArchived(event.target.checked)}
           />
-          Show archived
+          📦
         </label>
       </div>
+
+      {/* Note list */}
       <ul className="note-list">
         {visibleNotes.map((note) => (
           <li
             key={note.id}
             className={`note-item ${note.archived ? 'archived' : ''}`}
           >
-            <div className="note-main">
+            <div className="note-body">
+              {note.pinned && <span className="pin-indicator">📌 </span>}
               {editingId === note.id ? (
-                <input
-                  className="note-input"
-                  value={editingText}
-                  onChange={(event) => setEditingText(event.target.value)}
-                />
+                <>
+                  <textarea
+                    className="note-textarea edit-textarea"
+                    rows={3}
+                    value={editingText}
+                    onChange={(event) => setEditingText(event.target.value)}
+                    onInput={(event) => {
+                      const el = event.currentTarget;
+                      el.style.height = 'auto';
+                      el.style.height = el.scrollHeight + 'px';
+                    }}
+                    autoFocus
+                  />
+                  <div className="edit-actions">
+                    <button className="note-btn save-btn" onClick={() => saveEdit(note.id)}>
+                      Save
+                    </button>
+                    <button className="btn-ghost" onClick={() => { setEditingId(null); setEditingText(''); }}>
+                      Cancel
+                    </button>
+                  </div>
+                </>
               ) : (
-                <span style={{ whiteSpace: 'pre-wrap' }}>{note.text}</span>
+                <span className="note-text">{note.text}</span>
               )}
-              <div className="note-tags">
-                {note.tags.map((tag) => (
-                  <span key={`${note.id}:${tag}`} className="note-tag">
-                    #{tag}
-                  </span>
-                ))}
-              </div>
+              {note.tags.length > 0 && (
+                <div className="note-tags">
+                  {note.tags.map((tag) => (
+                    <span key={`${note.id}:${tag}`} className="note-tag">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="note-actions">
-              {editingId === note.id ? (
-                <button className="btn-ghost" onClick={() => saveEdit(note.id)}>
-                  Save
-                </button>
-              ) : (
+            {editingId !== note.id && (
+              <div className="note-actions">
                 <button className="btn-ghost" onClick={() => startEdit(note)}>
                   Edit
                 </button>
-              )}
-              <button
-                className="btn-ghost"
-                onClick={() => togglePinned(note.id)}
-              >
-                {note.pinned ? 'Unpin' : 'Pin'}
-              </button>
-              <button
-                className="btn-ghost"
-                onClick={() => toggleArchived(note.id)}
-              >
-                {note.archived ? 'Unarchive' : 'Archive'}
-              </button>
-              <button className="btn-ghost" onClick={() => deleteNote(note.id)}>
-                Delete
-              </button>
-            </div>
+                <button className="btn-ghost" onClick={() => togglePinned(note.id)}>
+                  {note.pinned ? 'Unpin' : 'Pin'}
+                </button>
+                <button className="btn-ghost" onClick={() => toggleArchived(note.id)}>
+                  {note.archived ? 'Unarchive' : 'Archive'}
+                </button>
+                <button className="btn-ghost btn-delete" onClick={() => deleteNote(note.id)}>
+                  Delete
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -394,79 +423,163 @@ class MbNotesElement extends HTMLElement {
           .note-surface{
             background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
             border-radius:16px;
-            padding:20px;
+            padding:12px;
             height:100%;
             box-sizing:border-box;
             display:flex;
             flex-direction:column;
-            border:1px solid rgba(245, 158, 11, 0.2);
+            border:1px solid rgba(245,158,11,0.2);
           }
-          .note-input-row,.note-toolbar{
+          .compose-block{
             display:flex;
-            gap:10px;
-            margin-bottom:8px;
+            flex-direction:column;
+            gap:4px;
+            margin-bottom:2px;
           }
-          .note-input{
+          .note-input-row{
+            display:flex;
+            gap:8px;
+            align-items:flex-start;
+          }
+          .note-textarea{
             flex:1;
             min-width:0;
-            padding:9px 10px;
-            border:1px solid rgba(245, 158, 11, 0.25);
+            padding:6px 9px;
+            border:1px solid rgba(245,158,11,0.25);
             border-radius:10px;
             background:rgba(255,255,255,0.95);
+            color:#1f2937;
             font-size:0.85rem;
+            font-family:inherit;
+            resize:vertical;
+            line-height:1.4;
+            max-height:200px;
+            overflow-y:auto;
+            box-sizing:border-box;
+          }
+          .edit-textarea{
+            width:100%;
+            box-sizing:border-box;
+            margin-bottom:4px;
+          }
+          .tags-input-row{
+            display:flex;
+            align-items:center;
+            gap:6px;
+          }
+          .tags-label{
+            font-size:0.75rem;
+            color:#92400e;
+            white-space:nowrap;
+            font-weight:500;
+          }
+          .tags-input{
+            flex:1;
+            min-width:0;
+          }
+          .note-input{
+            padding:5px 8px;
+            border:1px solid rgba(245,158,11,0.25);
+            border-radius:10px;
+            background:rgba(255,255,255,0.95);
+            color:#1f2937;
+            font-size:0.82rem;
+            font-family:inherit;
+          }
+          .note-toolbar{
+            display:flex;
+            gap:6px;
+            align-items:center;
+            margin-bottom:2px;
+          }
+          .note-toolbar .note-input{
+            flex:1;
+            min-width:0;
+          }
+          .tag-select{
+            flex:0 0 110px;
+            width:110px;
           }
           .note-btn{
-            border:1px solid rgba(245, 158, 11, 0.2);
+            border:1px solid rgba(245,158,11,0.2);
             border-radius:10px;
-            padding:9px 14px;
+            padding:6px 12px;
             background:#d97706;
             color:#fff;
             cursor:pointer;
+            font-size:0.82rem;
+            white-space:nowrap;
+            align-self:stretch;
+          }
+          .save-btn{
+            padding:5px 10px;
+            font-size:0.78rem;
+          }
+          .edit-actions{
+            display:flex;
+            gap:6px;
+            align-items:center;
           }
           .archive-toggle{
             display:flex;
             align-items:center;
-            gap:6px;
-            font-size:0.75rem;
+            gap:4px;
+            font-size:1rem;
             color:#92400e;
+            cursor:pointer;
             white-space:nowrap;
+            padding:3px;
           }
           .note-list{
             list-style:none;
             margin:0;
             padding:0;
-            display:grid;
-            gap:8px;
-            overflow:auto;
+            display:flex;
+            flex-direction:column;
+            gap:5px;
+            overflow-y:auto;
             min-height:0;
             flex:1;
           }
           .note-item{
             background:rgba(255,255,255,0.85);
-            border:1px solid rgba(245, 158, 11, 0.2);
+            border:1px solid rgba(245,158,11,0.2);
             border-radius:10px;
-            padding:10px;
+            padding:6px 10px;
             display:flex;
-            justify-content:space-between;
-            gap:10px;
+            flex-direction:column;
           }
           .note-item.archived{
-            opacity:0.7;
+            opacity:0.6;
           }
-          .note-main{
+          .note-item.archived .note-text{
+            text-decoration:line-through;
+          }
+          .note-body{
             min-width:0;
             display:flex;
             flex-direction:column;
-            gap:6px;
+            gap:5px;
+            color:#1f2937;
+          }
+          .pin-indicator{
+            font-size:0.75rem;
+          }
+          .note-text{
+            font-size:0.85rem;
+            white-space:pre-wrap;
+            word-break:break-word;
+            line-height:1.4;
+            color:#1f2937;
           }
           .note-tags{
             display:flex;
             flex-wrap:wrap;
-            gap:6px;
+            gap:4px;
           }
           .note-tag{
-            background:rgba(245, 158, 11, 0.15);
-            border:1px solid rgba(245, 158, 11, 0.2);
+            background:rgba(245,158,11,0.15);
+            border:1px solid rgba(245,158,11,0.2);
             border-radius:999px;
             padding:1px 7px;
             font-size:0.7rem;
@@ -474,18 +587,26 @@ class MbNotesElement extends HTMLElement {
           }
           .note-actions{
             display:flex;
-            flex-direction:column;
+            flex-direction:row;
+            flex-wrap:wrap;
             gap:4px;
-            align-items:flex-end;
+            margin-top:6px;
+            padding-top:6px;
+            border-top:1px solid rgba(245,158,11,0.15);
           }
           .btn-ghost{
             background:transparent;
             border:1px solid rgba(245,158,11,0.3);
             color:#92400e;
             border-radius:8px;
-            padding:5px 8px;
+            padding:3px 8px;
             font-size:0.72rem;
             cursor:pointer;
+          }
+          .btn-delete{
+            margin-left:auto;
+            border-color:rgba(220,38,38,0.3);
+            color:#b91c1c;
           }`;
         shadow.appendChild(style);
 

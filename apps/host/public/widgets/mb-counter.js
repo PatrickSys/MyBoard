@@ -938,12 +938,12 @@ v.styles = Ct`
     .stats-surface {
       background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
       border-radius: 16px;
-      padding: 20px;
+      padding: 14px;
       height: 100%;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 10px;
       border: 1px solid rgba(14, 165, 233, 0.3);
     }
     .stats-title {
@@ -961,31 +961,31 @@ v.styles = Ct`
     .stat-card {
       background: rgba(255, 255, 255, 0.14);
       border-radius: 10px;
-      padding: 10px;
+      padding: 8px;
       text-align: center;
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
     .stat-value {
-      font-size: 1.8rem;
+      font-size: 1.6rem;
       font-weight: 700;
       color: #fff;
       line-height: 1;
     }
     .stat-label {
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       color: rgba(255, 255, 255, 0.9);
       text-transform: uppercase;
-      margin-top: 4px;
+      margin-top: 3px;
       letter-spacing: 0.05em;
     }
     .trend {
       background: rgba(255, 255, 255, 0.1);
       border-radius: 10px;
-      padding: 10px;
+      padding: 8px;
       color: rgba(255, 255, 255, 0.95);
       font-size: 0.75rem;
       display: grid;
-      gap: 6px;
+      gap: 5px;
     }
     .trend-row {
       display: flex;
@@ -998,7 +998,7 @@ v.styles = Ct`
       gap: 8px;
     }
     .btn {
-      padding: 7px 14px;
+      padding: 5px 12px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.3);
       background: rgba(255, 255, 255, 0.18);

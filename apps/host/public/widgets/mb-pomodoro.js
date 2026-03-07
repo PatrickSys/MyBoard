@@ -803,11 +803,11 @@ class se extends M {
       height: 100%;
       background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
       border-radius: 16px;
-      padding: 16px;
+      padding: 12px;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
       border: 1px solid rgba(239, 68, 68, 0.2);
     }
     .row {
@@ -824,13 +824,13 @@ class se extends M {
       background: rgba(255, 255, 255, 0.9);
     }
     button {
-      padding: 8px 14px;
+      padding: 6px 12px;
       border: 1px solid rgba(0, 0, 0, 0.1);
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.9);
       cursor: pointer;
       font-weight: 500;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: #374151;
     }
     button:disabled {
@@ -862,7 +862,7 @@ class se extends M {
       background: #64748b;
     }
     .bar {
-      height: 7px;
+      height: 5px;
       background: rgba(255, 255, 255, 0.35);
       border-radius: 999px;
       overflow: hidden;
