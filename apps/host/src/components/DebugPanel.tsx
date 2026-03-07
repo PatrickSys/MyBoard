@@ -123,7 +123,7 @@ export default function DebugPanel() {
         <div className={styles.debugPanel} data-open={isOpen}>
             <button
                 className={styles.toggle}
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => setIsOpen((prev) => !prev)}
                 title="Toggle debug panel (Shift+D)"
                 aria-label="Toggle debug panel"
             >

@@ -127,10 +127,17 @@ export class WidgetProcessManager {
   private normalizeRecord(record: WidgetHealth): WidgetHealth {
     const now = this.now();
     const crashes = record.crashes.filter((timestamp) => now - timestamp <= this.crashWindowMs);
+    // Auto-heal crash-threshold quarantines once all crash timestamps age out of the window.
+    // Manual quarantines (FORCE_KILL, MANUAL_QUARANTINE) are kept until explicitly cleared.
+    const autoQuarantined = record.quarantineReason === 'CRASH_THRESHOLD_REACHED';
+    const state =
+      autoQuarantined && crashes.length < this.crashThreshold ? 'healthy' : record.state;
     return {
       ...record,
       crashes,
       crashCountInWindow: crashes.length,
+      state,
+      quarantineReason: state === 'healthy' ? undefined : record.quarantineReason,
       updatedAt: record.updatedAt,
     };
   }

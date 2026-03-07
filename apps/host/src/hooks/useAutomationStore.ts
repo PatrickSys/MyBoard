@@ -77,11 +77,9 @@ export function useAutomationStore() {
         createdAt: now,
         updatedAt: now,
       };
-      setWires((prev) => {
-        const next = [...prev, newWire];
-        broadcast(next);
-        return next;
-      });
+      const next = [...wires, newWire];
+      setWires(next);
+      queueMicrotask(() => broadcast(next));
       setLastError(null);
       return { ok: true };
     },
@@ -89,31 +87,21 @@ export function useAutomationStore() {
   );
 
   const removeWire = useCallback((id: string) => {
-    setWires((prev) => {
-      const next = prev.filter((wire) => wire.id !== id);
-      broadcast(next);
-      return next;
-    });
-  }, []);
+    const next = wires.filter((wire) => wire.id !== id);
+    setWires(next);
+    queueMicrotask(() => broadcast(next));
+  }, [wires]);
 
   const toggleWire = useCallback((id: string) => {
     const now = new Date().toISOString();
-    setWires((prev) =>
-      {
-        const next = prev.map((wire) =>
-        wire.id === id
-          ? {
-              ...wire,
-              enabled: !wire.enabled,
-              updatedAt: now,
-            }
-          : wire
-        );
-        broadcast(next);
-        return next;
-      }
+    const next = wires.map((wire) =>
+      wire.id === id
+        ? { ...wire, enabled: !wire.enabled, updatedAt: now }
+        : wire
     );
-  }, []);
+    setWires(next);
+    queueMicrotask(() => broadcast(next));
+  }, [wires]);
 
   return {
     wires,

@@ -15,6 +15,8 @@ export function useSystemHealth(
 ) {
   const [healthByWidget, setHealthByWidget] = useState<Record<string, WidgetHealthView>>({});
 
+  const widgetIdsKey = activeWidgetIds.join(',');
+
   useEffect(() => {
     if (!enabled) {
       return;
@@ -56,7 +58,7 @@ export function useSystemHealth(
     }
     const interval = setInterval(pull, 500);
     return () => clearInterval(interval);
-  }, [activeWidgetIds, enabled]);
+  }, [widgetIdsKey, enabled]);
 
   return healthByWidget;
 }

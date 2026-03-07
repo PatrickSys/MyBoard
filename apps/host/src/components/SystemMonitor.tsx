@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { notifyHost } from '@myboard/sdk';
 import type { WidgetManifest } from '@myboard/sdk';
 import { useSystemHealth } from '../hooks/useSystemHealth';
@@ -15,7 +15,7 @@ type Props = {
 };
 
 export default function SystemMonitor({ isOpen, activeWidgets, onClose }: Props) {
-  const activeIds = activeWidgets.map((widget) => widget.id);
+  const activeIds = useMemo(() => activeWidgets.map((w) => w.id), [activeWidgets]);
   const health = useSystemHealth(activeIds, isOpen);
 
   if (!isOpen) return null;
