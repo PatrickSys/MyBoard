@@ -13,9 +13,10 @@ type Props = {
   integrity?: string;
   trustedOrigin?: string;
   title?: string;
+  devMode?: boolean;
 };
 
-export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, title }: Props) {
+export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, title, devMode }: Props) {
   const hostRef = useRef<HTMLElement | null>(null);
   const [status, setStatus] = useState<SlotStatus>('loading');
   const [failReason, setFailReason] = useState<string | undefined>(undefined);
@@ -96,7 +97,7 @@ export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, tit
 
   // Get load time for display in dev mode
   const loadTime = performanceTracker.getMetrics(id)?.loadDuration;
-  const showLoadTime = process.env.NODE_ENV !== 'production' && status === 'ready' && loadTime;
+  const showLoadTime = devMode && status === 'ready' && loadTime;
 
   return (
     <div className="slot">

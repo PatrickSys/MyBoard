@@ -4,12 +4,14 @@ import { FEATURE_FLAGS } from '../config/feature-flags';
 type Props = {
   theme: 'light' | 'dark';
   isEditing: boolean;
+  devMode: boolean;
   onToggleTheme: () => void;
   onToggleEdit: () => void;
   onResetLayout: () => void;
   onOpenMarketplace: () => void;
   onOpenAutomation: () => void;
   onOpenMonitor: () => void;
+  onToggleDevMode: () => void;
 };
 
 /**
@@ -19,12 +21,14 @@ type Props = {
 export default function DashboardHeader({
   theme,
   isEditing,
+  devMode,
   onToggleTheme,
   onToggleEdit,
   onResetLayout,
   onOpenMarketplace,
   onOpenAutomation,
   onOpenMonitor,
+  onToggleDevMode,
 }: Props) {
   return (
     <div className="topbar">
@@ -38,7 +42,7 @@ export default function DashboardHeader({
             {isEditing ? 'Edit Mode' : 'View Mode'}
             {!isEditing && (
               <span className="keyboard-hint">
-                <kbd>Shift</kbd>+<kbd>E</kbd> Edit | <kbd>Shift</kbd>+<kbd>A</kbd> Auto | <kbd>Shift</kbd>+<kbd>Esc</kbd> Sys
+                <kbd>Shift</kbd>+<kbd>E</kbd> Edit | <kbd>Shift</kbd>+<kbd>A</kbd> Auto | <kbd>Shift</kbd>+<kbd>Esc</kbd> Sys | <kbd>Shift</kbd>+<kbd>D</kbd> Dev
               </span>
             )}
           </span>
@@ -52,20 +56,24 @@ export default function DashboardHeader({
           >
             {theme === 'light' ? 'Dark' : 'Light'}
           </button>
-          <button
-            onClick={onOpenMonitor}
-            className="btn--ghost"
-            title="System Monitor (Shift+Esc)"
-          >
-            Monitor
-          </button>
-          <button
-            onClick={onOpenAutomation}
-            className="btn--ghost"
-            title="Automation Studio (Shift+A)"
-          >
-            Studio
-          </button>
+          {devMode && (
+            <button
+              onClick={onOpenMonitor}
+              className="btn--ghost"
+              title="System Monitor (Shift+Esc)"
+            >
+              Monitor
+            </button>
+          )}
+          {devMode && (
+            <button
+              onClick={onOpenAutomation}
+              className="btn--ghost"
+              title="Automation Studio (Shift+A)"
+            >
+              Studio
+            </button>
+          )}
           <button
             onClick={onOpenMarketplace}
             className="btn--ghost"
@@ -86,6 +94,13 @@ export default function DashboardHeader({
             title="Reset layout (Shift+R)"
           >
             Reset
+          </button>
+          <button
+            onClick={onToggleDevMode}
+            className={devMode ? 'btn--primary' : 'btn--ghost'}
+            title={`${devMode ? 'Disable' : 'Enable'} developer mode (Shift+D)`}
+          >
+            Dev
           </button>
         </div>
       </div>

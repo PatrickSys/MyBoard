@@ -58,6 +58,7 @@ export default function GridDashboard() {
   // --- Local UI State ---
   const [isEditing, setIsEditing] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [devMode, setDevMode] = useState(false);
   const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
   const [isAutomationOpen, setIsAutomationOpen] = useState(false);
   const [isMonitorOpen, setIsMonitorOpen] = useState(false);
@@ -96,6 +97,23 @@ export default function GridDashboard() {
       /* ignore */
     }
   }, []);
+
+  // Persist devMode
+  useEffect(() => {
+    try {
+      setDevMode(localStorage.getItem('myboard.devMode') === 'true');
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('myboard.devMode', String(devMode));
+    } catch {
+      /* ignore */
+    }
+  }, [devMode]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -138,6 +156,10 @@ export default function GridDashboard() {
         if (e.key === 'Escape') {
           e.preventDefault();
           setIsMonitorOpen((p) => !p);
+        }
+        if (e.key === 'D') {
+          e.preventDefault();
+          setDevMode((p) => !p);
         }
       }
     };
@@ -234,6 +256,7 @@ export default function GridDashboard() {
       <DashboardHeader
         theme={theme}
         isEditing={isEditing}
+        devMode={devMode}
         onToggleTheme={() =>
           setTheme((p) => (p === 'light' ? 'dark' : 'light'))
         }
@@ -242,6 +265,7 @@ export default function GridDashboard() {
         onOpenMarketplace={() => setIsMarketplaceOpen(true)}
         onOpenAutomation={() => setIsAutomationOpen(true)}
         onOpenMonitor={() => setIsMonitorOpen(true)}
+        onToggleDevMode={() => setDevMode((p) => !p)}
       />
 
       <ResponsiveGridLayout
@@ -280,6 +304,7 @@ export default function GridDashboard() {
               url={widget.url}
               integrity={widget.integrity}
               trustedOrigin={manifestTrustedOrigin(widget.url)}
+              devMode={devMode}
             />
           </div>
         ))}
@@ -306,21 +331,25 @@ export default function GridDashboard() {
         onSave={handleSaveSettings}
       />
 
-      <AutomationStudio
-        isOpen={isAutomationOpen}
-        activeWidgets={activeWidgets}
-        onClose={() => setIsAutomationOpen(false)}
-      />
+      {devMode && (
+        <AutomationStudio
+          isOpen={isAutomationOpen}
+          activeWidgets={activeWidgets}
+          onClose={() => setIsAutomationOpen(false)}
+        />
+      )}
 
-      <SystemMonitor
-        isOpen={isMonitorOpen}
-        activeWidgets={activeWidgets}
-        onClose={() => setIsMonitorOpen(false)}
-      />
+      {devMode && (
+        <SystemMonitor
+          isOpen={isMonitorOpen}
+          activeWidgets={activeWidgets}
+          onClose={() => setIsMonitorOpen(false)}
+        />
+      )}
 
       <NotificationHub />
 
-      <DebugPanel />
+      {devMode && <DebugPanel />}
     </main>
   );
 }
