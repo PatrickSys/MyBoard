@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import type { WidgetManifest, WidgetPermission } from '@myboard/sdk';
 import { eventBus, registerHostBridge } from '@myboard/sdk';
@@ -31,6 +31,26 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 const GRID_BREAKPOINTS = { lg: 1200, md: 900, sm: 0 } as const;
 const GRID_COLUMNS = { lg: 4, md: 2, sm: 1 } as const;
 
+function normalizeSettingsValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeSettingsValue(entry));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entry]) => [key, normalizeSettingsValue(entry)])
+    );
+  }
+
+  return value;
+}
+
+function serializeSettings(settings: Record<string, unknown> | undefined): string {
+  return JSON.stringify(normalizeSettingsValue(settings ?? {}));
+}
+
 function manifestTrustedOrigin(url: string): string | undefined {
   if (!url.startsWith('http://') && !url.startsWith('https://'))
     return undefined;
@@ -58,6 +78,7 @@ export default function GridDashboard() {
   const [isAutomationOpen, setIsAutomationOpen] = useState(false);
   const [isMonitorOpen, setIsMonitorOpen] = useState(false);
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
+  const publishedSettingsRef = useRef(new Map<string, string>());
 
   // --- Data & Logic Hooks ---
   const {
@@ -163,12 +184,22 @@ export default function GridDashboard() {
         ),
     });
 
+    const nextPublishedSettings = new Map<string, string>();
     for (const [widgetId, record] of installedById.entries()) {
+      const serializedSettings = serializeSettings(record.settings);
+      nextPublishedSettings.set(widgetId, serializedSettings);
+
+      if (publishedSettingsRef.current.get(widgetId) === serializedSettings) {
+        continue;
+      }
+
       eventBus.publish('host', 'settings-updated', {
         widgetId,
         settings: record.settings ?? {},
       });
     }
+
+    publishedSettingsRef.current = nextPublishedSettings;
   }, [installedById, manifestMap]);
 
   // --- Computed Views ---
@@ -204,6 +235,10 @@ export default function GridDashboard() {
   const handleSaveSettings = (settings: Record<string, unknown>) => {
     if (!settingsWidgetId) return;
     widgetInstallStore.updateSettings(settingsWidgetId, settings);
+    publishedSettingsRef.current = new Map(publishedSettingsRef.current).set(
+      settingsWidgetId,
+      serializeSettings(settings)
+    );
     eventBus.publish('host', 'settings-updated', {
       widgetId: settingsWidgetId,
       settings,
