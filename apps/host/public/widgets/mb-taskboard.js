@@ -284,10 +284,10 @@ S.elementStyles = [], S.shadowRootOptions = { mode: "open" }, S[D("elementProper
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const O = globalThis, W = O.trustedTypes, dt = W ? W.createPolicy("lit-html", { createHTML: (r) => r }) : void 0, yt = "$lit$", b = `lit$${Math.random().toFixed(9).slice(2)}$`, vt = "?" + b, Nt = `<${vt}>`, w = document, U = () => w.createComment(""), I = (r) => r === null || typeof r != "object" && typeof r != "function", it = Array.isArray, Ht = (r) => it(r) || typeof (r == null ? void 0 : r[Symbol.iterator]) == "function", G = `[ 	
+const O = globalThis, W = O.trustedTypes, dt = W ? W.createPolicy("lit-html", { createHTML: (r) => r }) : void 0, yt = "$lit$", b = `lit$${Math.random().toFixed(9).slice(2)}$`, vt = "?" + b, Nt = `<${vt}>`, A = document, U = () => A.createComment(""), I = (r) => r === null || typeof r != "object" && typeof r != "function", it = Array.isArray, Ht = (r) => it(r) || typeof (r == null ? void 0 : r[Symbol.iterator]) == "function", G = `[ 	
 \f\r]`, P = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ht = /-->/g, ut = />/g, y = RegExp(`>|${G}(?:([^\\s"'>=/]+)(${G}*=${G}*(?:[^ 	
-\f\r"'\`<>=]|("|')|))|$)`, "g"), pt = /'/g, gt = /"/g, _t = /^(?:script|style|textarea|title)$/i, zt = (r) => (t, ...e) => ({ _$litType$: r, strings: t, values: e }), x = zt(1), E = Symbol.for("lit-noChange"), u = Symbol.for("lit-nothing"), ft = /* @__PURE__ */ new WeakMap(), _ = w.createTreeWalker(w, 129);
-function At(r, t) {
+\f\r"'\`<>=]|("|')|))|$)`, "g"), pt = /'/g, gt = /"/g, _t = /^(?:script|style|textarea|title)$/i, zt = (r) => (t, ...e) => ({ _$litType$: r, strings: t, values: e }), x = zt(1), E = Symbol.for("lit-noChange"), u = Symbol.for("lit-nothing"), ft = /* @__PURE__ */ new WeakMap(), _ = A.createTreeWalker(A, 129);
+function wt(r, t) {
   if (!it(r) || !r.hasOwnProperty("raw")) throw Error("invalid template strings array");
   return dt !== void 0 ? dt.createHTML(t) : t;
 }
@@ -301,7 +301,7 @@ const Bt = (r, t) => {
     const f = n === y && r[l + 1].startsWith("/>") ? " " : "";
     o += n === P ? a + Nt : c >= 0 ? (s.push(d), a.slice(0, c) + yt + a.slice(c) + b + f) : a + b + (c === -2 ? l : f);
   }
-  return [At(r, o + (r[e] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), s];
+  return [wt(r, o + (r[e] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), s];
 };
 class R {
   constructor({ strings: t, _$litType$: e }, s) {
@@ -336,7 +336,7 @@ class R {
     }
   }
   static createElement(t, e) {
-    const s = w.createElement("template");
+    const s = A.createElement("template");
     return s.innerHTML = t, s;
   }
 }
@@ -358,7 +358,7 @@ class jt {
     return this._$AM._$AU;
   }
   u(t) {
-    const { el: { content: e }, parts: s } = this._$AD, i = ((t == null ? void 0 : t.creationScope) ?? w).importNode(e, !0);
+    const { el: { content: e }, parts: s } = this._$AD, i = ((t == null ? void 0 : t.creationScope) ?? A).importNode(e, !0);
     _.currentNode = i;
     let o = _.nextNode(), n = 0, l = 0, a = s[0];
     for (; a !== void 0; ) {
@@ -368,7 +368,7 @@ class jt {
       }
       n !== (a == null ? void 0 : a.index) && (o = _.nextNode(), n++);
     }
-    return _.currentNode = w, i;
+    return _.currentNode = A, i;
   }
   p(t) {
     let e = 0;
@@ -404,11 +404,11 @@ class N {
     this._$AH !== t && (this._$AR(), this._$AH = this.O(t));
   }
   _(t) {
-    this._$AH !== u && I(this._$AH) ? this._$AA.nextSibling.data = t : this.T(w.createTextNode(t)), this._$AH = t;
+    this._$AH !== u && I(this._$AH) ? this._$AA.nextSibling.data = t : this.T(A.createTextNode(t)), this._$AH = t;
   }
   $(t) {
     var o;
-    const { values: e, _$litType$: s } = t, i = typeof s == "number" ? this._$AC(t) : (s.el === void 0 && (s.el = R.createElement(At(s.h, s.h[0]), this.options)), s);
+    const { values: e, _$litType$: s } = t, i = typeof s == "number" ? this._$AC(t) : (s.el === void 0 && (s.el = R.createElement(wt(s.h, s.h[0]), this.options)), s);
     if (((o = this._$AH) == null ? void 0 : o._$AD) === i) this._$AH.p(e);
     else {
       const n = new jt(i, this), l = n.u(this.options);
@@ -520,7 +520,7 @@ const Kt = (r, t, e) => {
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const A = globalThis;
+const w = globalThis;
 class M extends S {
   constructor() {
     super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
@@ -547,10 +547,10 @@ class M extends S {
   }
 }
 var mt;
-M._$litElement$ = !0, M.finalized = !0, (mt = A.litElementHydrateSupport) == null || mt.call(A, { LitElement: M });
-const Z = A.litElementPolyfillSupport;
+M._$litElement$ = !0, M.finalized = !0, (mt = w.litElementHydrateSupport) == null || mt.call(w, { LitElement: M });
+const Z = w.litElementPolyfillSupport;
 Z == null || Z({ LitElement: M });
-(A.litElementVersions ?? (A.litElementVersions = [])).push("4.2.1");
+(w.litElementVersions ?? (w.litElementVersions = [])).push("4.2.1");
 /**
  * @license
  * Copyright 2017 Google LLC
@@ -612,7 +612,7 @@ function ot() {
   const r = globalThis;
   return r.__MYBOARD_SDK_RUNTIME__ || (r.__MYBOARD_SDK_RUNTIME__ = Zt()), r.__MYBOARD_SDK_RUNTIME__;
 }
-class Qt {
+class Xt {
   constructor() {
     this.states = /* @__PURE__ */ new Map(), this.subscribers = /* @__PURE__ */ new Map(), this.storageKey = "myboard-widget-states", this.loadFromStorage();
   }
@@ -698,13 +698,13 @@ class Qt {
       }
   }
 }
-const X = ot(), wt = X.instances.get("widget-store") ?? new Qt();
-X.instances.has("widget-store") || X.instances.set("widget-store", wt);
-const q = wt, kt = ot(), xt = (r) => `${r}:settings`;
+const Q = ot(), At = Q.instances.get("widget-store") ?? new Xt();
+Q.instances.has("widget-store") || Q.instances.set("widget-store", At);
+const q = At, kt = ot(), xt = (r) => `${r}:settings`;
 function V() {
   return kt.bridge;
 }
-function Xt() {
+function Qt() {
   return kt.commandHandlers;
 }
 function te(r) {
@@ -733,7 +733,7 @@ function re(r, t) {
   const e = V();
   if (e.registerWidgetCommandHandler)
     return e.registerWidgetCommandHandler(r, t);
-  const s = Xt();
+  const s = Qt();
   return s.set(r, t), () => {
     s.get(r) === t && s.delete(r);
   };
@@ -811,7 +811,7 @@ const v = "taskboard", bt = "taskboard:tasks", F = {
 function tt(r, t = F.defaultPriority) {
   return r === "low" || r === "medium" || r === "high" ? r : t;
 }
-function Q(r, t = F) {
+function X(r, t = F) {
   return {
     showCompleted: (r == null ? void 0 : r.showCompleted) ?? t.showCompleted,
     defaultPriority: tt(
@@ -858,7 +858,7 @@ let p = class extends M {
     super.connectedCallback();
     try {
       this.tasks = q.getState(bt) ?? [];
-      const r = Q(
+      const r = X(
         te(v)
       );
       this.showCompleted = r.showCompleted, this.priorityInput = r.defaultPriority, this.unsubscribers.push(
@@ -911,7 +911,7 @@ let p = class extends M {
         z.subscribe("host", "settings-updated", (t) => {
           const { widgetId: e, settings: s } = t.data;
           if (e === v) {
-            const i = Q(
+            const i = X(
               {
                 showCompleted: s.showCompleted ?? this.showCompleted,
                 defaultPriority: s.defaultPriority ?? this.priorityInput
@@ -936,7 +936,7 @@ let p = class extends M {
     this.tasks = r, q.setState(bt, r);
   }
   saveSettings() {
-    const r = Q({
+    const r = X({
       showCompleted: this.showCompleted,
       defaultPriority: this.priorityInput
     });
@@ -1045,7 +1045,7 @@ let p = class extends M {
                 <div class="task-actions">
                   ${o ? x`<button
                         class="icon-btn btn-back"
-                        title="Move back"
+                        data-tooltip="Move back"
                         @click=${() => this.moveTask(i, l[r])}
                       >
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1054,7 +1054,7 @@ let p = class extends M {
                       </button>` : null}
                   ${n ? x`<button
                         class="icon-btn btn-next"
-                        title="Move forward"
+                        data-tooltip="Move forward"
                         @click=${() => this.moveTask(i, a[r])}
                       >
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1063,7 +1063,7 @@ let p = class extends M {
                       </button>` : null}
                   <button
                     class="icon-btn btn-delete"
-                    title="Delete task"
+                    data-tooltip="Delete task"
                     @click=${() => this.deleteTask(i.id)}
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1359,6 +1359,27 @@ p.styles = Ct`
     .icon-btn.btn-next:hover  { background: #eff6ff; border-color: #93c5fd; color: #2563eb; }
     .icon-btn.btn-delete:hover { background: #fff1f2; border-color: #fca5a5; color: #dc2626; }
     .icon-btn.btn-delete { margin-left: auto; }
+    /* CSS tooltip */
+    .icon-btn[data-tooltip] { position: relative; }
+    .icon-btn[data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: #f8fafc;
+      font-size: 0.6rem;
+      font-weight: 500;
+      white-space: nowrap;
+      padding: 3px 7px;
+      border-radius: 5px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 10;
+    }
+    .icon-btn[data-tooltip]:hover::after { opacity: 1; }
     .settings-row {
       font-size: 0.75rem;
       color: #0369a1;

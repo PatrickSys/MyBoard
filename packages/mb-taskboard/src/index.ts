@@ -326,6 +326,27 @@ export class MbTaskboardElement extends LitElement {
     .icon-btn.btn-next:hover  { background: #eff6ff; border-color: #93c5fd; color: #2563eb; }
     .icon-btn.btn-delete:hover { background: #fff1f2; border-color: #fca5a5; color: #dc2626; }
     .icon-btn.btn-delete { margin-left: auto; }
+    /* CSS tooltip */
+    .icon-btn[data-tooltip] { position: relative; }
+    .icon-btn[data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: #f8fafc;
+      font-size: 0.6rem;
+      font-weight: 500;
+      white-space: nowrap;
+      padding: 3px 7px;
+      border-radius: 5px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 10;
+    }
+    .icon-btn[data-tooltip]:hover::after { opacity: 1; }
     .settings-row {
       font-size: 0.75rem;
       color: #0369a1;
@@ -634,7 +655,7 @@ export class MbTaskboardElement extends LitElement {
                   ${canMoveBack
                     ? html`<button
                         class="icon-btn btn-back"
-                        title="Move back"
+                        data-tooltip="Move back"
                         @click=${() => this.moveTask(task, previousStatus[status])}
                       >
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -645,7 +666,7 @@ export class MbTaskboardElement extends LitElement {
                   ${canMoveForward
                     ? html`<button
                         class="icon-btn btn-next"
-                        title="Move forward"
+                        data-tooltip="Move forward"
                         @click=${() => this.moveTask(task, nextStatus[status])}
                       >
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -655,7 +676,7 @@ export class MbTaskboardElement extends LitElement {
                     : null}
                   <button
                     class="icon-btn btn-delete"
-                    title="Delete task"
+                    data-tooltip="Delete task"
                     @click=${() => this.deleteTask(task.id)}
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
