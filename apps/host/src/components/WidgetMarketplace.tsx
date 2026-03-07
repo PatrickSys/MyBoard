@@ -9,11 +9,14 @@ type Props = {
   catalog: WidgetCatalogResponse | null;
   installedRecords: ReadonlyArray<WidgetInstallRecord>;
   errorMessage?: string;
+  currentPageWidgetIds: Set<string>;
   onClose: () => void;
   onInstall: (manifest: WidgetManifest) => void;
   onUninstall: (widgetId: string) => void;
   onToggleEnabled: (widgetId: string, enabled: boolean) => void;
   onOpenSettings: (widgetId: string) => void;
+  onAddToPage: (widgetId: string) => void;
+  onRemoveFromPage: (widgetId: string) => void;
 };
 
 export default function WidgetMarketplace({
@@ -21,11 +24,14 @@ export default function WidgetMarketplace({
   catalog,
   installedRecords,
   errorMessage,
+  currentPageWidgetIds,
   onClose,
   onInstall,
   onUninstall,
   onToggleEnabled,
   onOpenSettings,
+  onAddToPage,
+  onRemoveFromPage,
 }: Props) {
   const [query, setQuery] = useState('');
   const [visible, setVisible] = useState(false);
@@ -139,6 +145,7 @@ export default function WidgetMarketplace({
             const isInstalled = Boolean(record);
             const isEnabled = Boolean(record?.enabled);
             const hasUpdate = isInstalled && record?.installedVersion !== widget.version;
+            const isOnPage = currentPageWidgetIds.has(widget.id);
             return (
               <article
                 key={widget.id}
@@ -159,7 +166,9 @@ export default function WidgetMarketplace({
                         {hasUpdate
                           ? `update available`
                           : isEnabled
-                            ? 'installed'
+                            ? isOnPage
+                              ? 'on page'
+                              : 'installed'
                             : 'disabled'}
                       </span>
                     ) : (
@@ -187,6 +196,22 @@ export default function WidgetMarketplace({
                       }}
                     >
                       Install
+                    </button>
+                  )}
+                  {isInstalled && isEnabled && !isOnPage && (
+                    <button
+                      className="btn--primary"
+                      onClick={() => onAddToPage(widget.id)}
+                    >
+                      Add to Page
+                    </button>
+                  )}
+                  {isInstalled && isEnabled && isOnPage && (
+                    <button
+                      className="btn--ghost"
+                      onClick={() => onRemoveFromPage(widget.id)}
+                    >
+                      Remove from Page
                     </button>
                   )}
                   {isInstalled && (

@@ -3,13 +3,6 @@ import type { WidgetManifest } from '@myboard/sdk';
 
 type SavedLayout = { i: string; x: number; y: number; w: number; h: number }[];
 
-const STORAGE_KEY = 'myboard.layout';
-const DEFAULT_LAYOUT: SavedLayout = [
-  { i: 'notes', x: 0, y: 0, w: 2, h: 3 },
-  { i: 'pomodoro', x: 2, y: 0, w: 2, h: 3 },
-  { i: 'counter', x: 0, y: 3, w: 2, h: 2 },
-];
-
 /**
  * Generates a default layout based on manifest defaults or fallback logic.
  */
@@ -56,39 +49,36 @@ function reconcileLayout(
 }
 
 /**
- * Hook to manage the dashboard grid layout.
- * 
- * Responsibilities:
- * - Load/Save layout from localStorage
- * - Reconcile layout when active widgets change
- * - Provide handlers for layout changes (drag/resize)
+ * Hook to manage the dashboard grid layout for the active page.
+ *
+ * Persistence is now owned by usePageStore. This hook:
+ * - Accepts the page layout and page widget list
+ * - Reconciles layout when widgets change
+ * - Calls onLayoutChange / onResetLayout callbacks to propagate to the store
  */
-export function useDashboardLayout(activeWidgets: ReadonlyArray<WidgetManifest>) {
-  const [layout, setLayout] = useState<SavedLayout>(DEFAULT_LAYOUT);
+export function useDashboardLayout(
+  pageWidgets: ReadonlyArray<WidgetManifest>,
+  pageLayout: SavedLayout,
+  pageId: string,
+  onLayoutChange: (layout: SavedLayout) => void,
+  onResetLayout: () => void
+) {
+  const [layout, setLayout] = useState<SavedLayout>(pageLayout);
 
-  // Load from storage on mount
+  // Re-initialize when active page changes
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setLayout(JSON.parse(saved) as SavedLayout);
-    } catch {
-      // ignore
-    }
-  }, []);
+    setLayout(pageLayout);
+  }, [pageId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Save to storage on change
+  // Reconcile when widget list changes (e.g. add/remove widget from page)
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
-    } catch {
-      // ignore
-    }
-  }, [layout]);
+    setLayout((prev) => reconcileLayout(prev, pageWidgets));
+  }, [pageWidgets]);
 
-  // Reconcile when widget list changes (e.g. install/uninstall)
+  // Propagate layout changes to the page store
   useEffect(() => {
-    setLayout((prev) => reconcileLayout(prev, activeWidgets));
-  }, [activeWidgets]);
+    onLayoutChange(layout);
+  }, [layout]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLayoutChange = useCallback((current: unknown, allLayouts: unknown) => {
     const nextLayout =
@@ -97,8 +87,10 @@ export function useDashboardLayout(activeWidgets: ReadonlyArray<WidgetManifest>)
   }, []);
 
   const resetLayout = useCallback(() => {
-    setLayout(buildDefaultLayout(activeWidgets));
-  }, [activeWidgets]);
+    const fresh = buildDefaultLayout(pageWidgets);
+    setLayout(fresh);
+    onResetLayout();
+  }, [pageWidgets, onResetLayout]);
 
   return {
     layout,

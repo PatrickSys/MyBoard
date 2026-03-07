@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import type { WidgetManifest, WidgetPermission } from '@myboard/sdk';
 import { eventBus, registerHostBridge } from '@myboard/sdk';
@@ -25,6 +25,7 @@ import {
 import { useWidgetCatalog } from '../hooks/useWidgetCatalog';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { useAutomationRuntime } from '../hooks/useAutomationRuntime';
+import { usePageStore } from '../hooks/usePageStore';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -50,7 +51,8 @@ function manifestTrustedOrigin(url: string): string | undefined {
  *
  * Architecture:
  * - Data Layer: `useWidgetCatalog` manages registry and active status.
- * - Layout Layer: `useDashboardLayout` manages grid state.
+ * - Page Layer: `usePageStore` manages multi-page state and persistence.
+ * - Layout Layer: `useDashboardLayout` manages grid state per page.
  * - Automation Layer: `useAutomationRuntime` executes cross-widget wires.
  * - Presentation: Composes OS-level overlays (Studio, Monitor, Notifications).
  */
@@ -76,8 +78,51 @@ export default function GridDashboard() {
     setError: setCatalogError,
   } = useWidgetCatalog();
 
-  const { layout, handleLayoutChange, resetLayout } =
-    useDashboardLayout(activeWidgets);
+  // --- Page Store ---
+  const pageStore = usePageStore(installedRecords);
+  const {
+    pages,
+    activePageId,
+    activePage,
+    setActivePage,
+    createPage,
+    renamePage,
+    deletePage,
+    addWidgetToPage,
+    removeWidgetFromPage,
+    updatePageLayout,
+    resetPageLayout,
+  } = pageStore;
+
+  // Filter active widgets to those on the current page
+  const pageWidgets = useMemo(() => {
+    const pageWidgetIds = new Set(activePage.widgetIds);
+    return activeWidgets.filter((w) => pageWidgetIds.has(w.id));
+  }, [activeWidgets, activePage.widgetIds]);
+
+  const currentPageWidgetIds = useMemo(
+    () => new Set(activePage.widgetIds),
+    [activePage.widgetIds]
+  );
+
+  const handlePageLayoutChange = useCallback(
+    (layout: { i: string; x: number; y: number; w: number; h: number }[]) => {
+      updatePageLayout(activePageId, layout);
+    },
+    [activePageId, updatePageLayout]
+  );
+
+  const handlePageResetLayout = useCallback(() => {
+    resetPageLayout(activePageId, activeWidgets);
+  }, [activePageId, activeWidgets, resetPageLayout]);
+
+  const { layout, handleLayoutChange, resetLayout } = useDashboardLayout(
+    pageWidgets,
+    activePage.layout,
+    activePageId,
+    handlePageLayoutChange,
+    handlePageResetLayout
+  );
 
   // Initialize the automation execution engine
   useAutomationRuntime();
@@ -161,12 +206,23 @@ export default function GridDashboard() {
           e.preventDefault();
           setDevMode((p) => !p);
         }
+        // Page navigation: Shift+[ (previous) and Shift+] (next)
+        if (e.key === '{') {
+          e.preventDefault();
+          const idx = pages.findIndex((p) => p.id === activePageId);
+          if (idx > 0) setActivePage(pages[idx - 1].id);
+        }
+        if (e.key === '}') {
+          e.preventDefault();
+          const idx = pages.findIndex((p) => p.id === activePageId);
+          if (idx < pages.length - 1) setActivePage(pages[idx + 1].id);
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [resetLayout]);
+  }, [resetLayout, pages, activePageId, setActivePage]);
 
   // Register Host Bridge and push canonical settings into mounted widgets.
   useEffect(() => {
@@ -212,11 +268,11 @@ export default function GridDashboard() {
 
   const items = useMemo(() => {
     const map = new Map(layout.map((entry) => [entry.i, entry] as const));
-    return activeWidgets.map((widget) => ({
+    return pageWidgets.map((widget) => ({
       widget,
       layout: map.get(widget.id),
     }));
-  }, [activeWidgets, layout]);
+  }, [pageWidgets, layout]);
 
   const gridClassName = isEditing ? 'rgl rgl--editing' : 'rgl';
 
@@ -236,7 +292,24 @@ export default function GridDashboard() {
       return;
     }
     setCatalogError(null);
+    // Auto-add newly installed widget to current page
+    addWidgetToPage(activePageId, manifest.id);
   };
+
+  const handleUninstall = (id: string) => {
+    widgetInstallStore.uninstall(id);
+    // Pruning from all pages is handled by usePageStore's installedRecords effect
+  };
+
+  const handleAddToPage = useCallback(
+    (widgetId: string) => addWidgetToPage(activePageId, widgetId),
+    [activePageId, addWidgetToPage]
+  );
+
+  const handleRemoveFromPage = useCallback(
+    (widgetId: string) => removeWidgetFromPage(activePageId, widgetId),
+    [activePageId, removeWidgetFromPage]
+  );
 
   const handleSaveSettings = (settings: Record<string, unknown>) => {
     if (!settingsWidgetId) return;
@@ -257,6 +330,12 @@ export default function GridDashboard() {
         theme={theme}
         isEditing={isEditing}
         devMode={devMode}
+        pages={pages}
+        activePageId={activePageId}
+        onSelectPage={setActivePage}
+        onCreatePage={createPage}
+        onRenamePage={renamePage}
+        onDeletePage={deletePage}
         onToggleTheme={() =>
           setTheme((p) => (p === 'light' ? 'dark' : 'light'))
         }
@@ -315,13 +394,16 @@ export default function GridDashboard() {
         catalog={catalog}
         installedRecords={installedRecords}
         errorMessage={catalogError ?? undefined}
+        currentPageWidgetIds={currentPageWidgetIds}
         onClose={() => setIsMarketplaceOpen(false)}
         onInstall={handleInstall}
-        onUninstall={(id) => widgetInstallStore.uninstall(id)}
+        onUninstall={handleUninstall}
         onToggleEnabled={(id, enabled) =>
           widgetInstallStore.setEnabled(id, enabled)
         }
         onOpenSettings={(id) => setSettingsWidgetId(id)}
+        onAddToPage={handleAddToPage}
+        onRemoveFromPage={handleRemoveFromPage}
       />
 
       <WidgetSettingsPanel

@@ -507,10 +507,127 @@ button:disabled {
   margin: 0;
 }
 
+.topbar__pages {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  padding: 0 8px;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.page-tab-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.page-tab {
+  font-size: 0.8rem;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.page-tab:hover {
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--text);
+}
+
+.page-tab--active {
+  background: var(--accent);
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.page-tab--active:hover {
+  background: var(--accent-hover);
+  color: #ffffff !important;
+}
+
+.page-tab__input {
+  font-size: 0.8rem;
+  padding: 4px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  width: 100px;
+  font-family: inherit;
+}
+
+.page-tab__delete {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: 0.65rem;
+  line-height: 1;
+  border-radius: 50%;
+  background: var(--error);
+  color: #ffffff !important;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.page-tab__delete:hover {
+  background: #dc2626;
+  color: #ffffff !important;
+  transform: none;
+}
+
+.page-tab-wrap:hover .page-tab__delete {
+  opacity: 1;
+}
+
+.page-tab__add {
+  font-size: 0.85rem;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.page-tab__add:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .topbar__actions {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 /* Grid item */
