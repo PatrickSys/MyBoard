@@ -31,24 +31,8 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 const GRID_BREAKPOINTS = { lg: 1200, md: 900, sm: 0 } as const;
 const GRID_COLUMNS = { lg: 4, md: 2, sm: 1 } as const;
 
-function normalizeSettingsValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((entry) => normalizeSettingsValue(entry));
-  }
-
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, entry]) => [key, normalizeSettingsValue(entry)])
-    );
-  }
-
-  return value;
-}
-
 function serializeSettings(settings: Record<string, unknown> | undefined): string {
-  return JSON.stringify(normalizeSettingsValue(settings ?? {}));
+  return JSON.stringify(settings ?? {});
 }
 
 function manifestTrustedOrigin(url: string): string | undefined {
