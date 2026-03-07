@@ -64,6 +64,34 @@ function normalizeTaskTitle(value: unknown): string | null {
   return trimmed || null;
 }
 
+function formatRelativeTime(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const date = new Date(timestamp);
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  if (date.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  return date.toLocaleDateString(undefined, opts);
+}
+
+function formatDueDate(dateStr: string): { label: string; state: 'overdue' | 'due-soon' | 'normal' } {
+  const due = new Date(dateStr + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.floor((due.getTime() - today.getTime()) / 86_400_000);
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  if (due.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
+  const label = due.toLocaleDateString(undefined, opts);
+  if (diffDays <= 0) return { label, state: 'overdue' };
+  if (diffDays <= 2) return { label, state: 'due-soon' };
+  return { label, state: 'normal' };
+}
+
 @customElement('mb-taskboard')
 export class MbTaskboardElement extends LitElement {
   @state() private tasks: Task[] = [];
@@ -256,6 +284,21 @@ export class MbTaskboardElement extends LitElement {
       background: #f0fdf4;
       color: #15803d;
     }
+    .task-created {
+      font-size: 0.65rem;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+    .task-due {
+      font-size: 0.68rem;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-weight: 500;
+    }
+    .task-due--normal  { color: #64748b; }
+    .task-due--due-soon { color: #d97706; }
+    .task-due--overdue  { color: #dc2626; font-weight: 600; }
     .task-actions {
       display: flex;
       gap: 4px;
@@ -575,11 +618,18 @@ export class MbTaskboardElement extends LitElement {
               >
                 <div class="task-main">${task.title}</div>
                 <div class="task-meta">
-                  <span class="priority-pill ${task.priority}"
-                    >${task.priority}</span
-                  >
-                  <span>${task.dueDate ? `Due ${task.dueDate}` : ''}</span>
+                  <span class="priority-pill ${task.priority}">${task.priority}</span>
+                  <span class="task-created">${formatRelativeTime(task.createdAt)}</span>
                 </div>
+                ${task.dueDate ? (() => {
+                  const { label, state } = formatDueDate(task.dueDate);
+                  return html`<div class="task-due task-due--${state}">
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="3" width="12" height="12" rx="2"/><path d="M5 1v4M11 1v4M2 7h12"/>
+                    </svg>
+                    ${label}
+                  </div>`;
+                })() : null}
                 <div class="task-actions">
                   ${canMoveBack
                     ? html`<button
