@@ -32,6 +32,7 @@
 - Commits: small, focused, imperative mood. Conventional style encouraged:
   - Example: `feat(host): add WidgetSlot loading state`.
 - PRs: clear description, linked issues, before/after screenshots for UI, test plan, and any perf or accessibility notes.
+- When opening PRs with `gh pr create`, do not rely on memory or an abbreviated body. Either use the repo PR template or include the exact checked hygiene checklist items required by `.github/workflows/pr-hygiene.yml`: `Builds pass`, `Tests added/updated`, and `Lint/format pass`.
 - Ensure: builds, tests, and lint pass before requesting review.
 
 ## Security & Configuration Tips
