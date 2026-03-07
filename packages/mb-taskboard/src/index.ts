@@ -92,6 +92,29 @@ function formatDueDate(dateStr: string): { label: string; state: 'overdue' | 'du
   return { label, state: 'normal' };
 }
 
+const PRIORITY_WEIGHT: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 };
+
+function urgencyBucket(task: Task): number {
+  if (!task.dueDate) return 3;
+  const { state } = formatDueDate(task.dueDate);
+  if (state === 'overdue') return 0;
+  if (state === 'due-soon') return 1;
+  return 2;
+}
+
+function sortTasks(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => {
+    const bucketDiff = urgencyBucket(a) - urgencyBucket(b);
+    if (bucketDiff !== 0) return bucketDiff;
+    if (a.dueDate && b.dueDate && a.dueDate !== b.dueDate) {
+      return a.dueDate < b.dueDate ? -1 : 1;
+    }
+    const priorityDiff = PRIORITY_WEIGHT[a.priority] - PRIORITY_WEIGHT[b.priority];
+    if (priorityDiff !== 0) return priorityDiff;
+    return b.createdAt - a.createdAt;
+  });
+}
+
 @customElement('mb-taskboard')
 export class MbTaskboardElement extends LitElement {
   @state() private tasks: Task[] = [];
@@ -599,11 +622,11 @@ export class MbTaskboardElement extends LitElement {
   }
 
   private renderColumn(status: TaskStatus, title: string) {
-    const tasks = this.tasks.filter((task) => {
+    const tasks = sortTasks(this.tasks.filter((task) => {
       if (status !== task.status) return false;
       if (status === 'done' && !this.showCompleted) return false;
       return true;
-    });
+    }));
 
     const isDragOver = this.dragOverColumn === status;
 
@@ -638,10 +661,6 @@ export class MbTaskboardElement extends LitElement {
                 @dragend=${() => this.handleDragEnd()}
               >
                 <div class="task-main">${task.title}</div>
-                <div class="task-meta">
-                  <span class="priority-pill ${task.priority}">${task.priority}</span>
-                  <span class="task-created">${formatRelativeTime(task.createdAt)}</span>
-                </div>
                 ${task.dueDate ? (() => {
                   const { label, state } = formatDueDate(task.dueDate);
                   return html`<div class="task-due task-due--${state}">
@@ -651,6 +670,10 @@ export class MbTaskboardElement extends LitElement {
                     ${label}
                   </div>`;
                 })() : null}
+                <div class="task-meta">
+                  <span class="priority-pill ${task.priority}">${task.priority}</span>
+                  <span class="task-created">${formatRelativeTime(task.createdAt)}</span>
+                </div>
                 <div class="task-actions">
                   ${canMoveBack
                     ? html`<button
