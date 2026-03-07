@@ -72,6 +72,8 @@ export class MbTaskboardElement extends LitElement {
   @state() private priorityInput: TaskPriority =
     DEFAULT_SETTINGS.defaultPriority;
   @state() private showCompleted = DEFAULT_SETTINGS.showCompleted;
+  @state() private draggedTaskId: string | null = null;
+  @state() private dragOverColumn: TaskStatus | null = null;
 
   private unsubscribers: Array<() => void> = [];
 
@@ -83,9 +85,9 @@ export class MbTaskboardElement extends LitElement {
     }
     .surface {
       height: 100%;
-      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
       border-radius: 16px;
-      border: 1px solid rgba(14, 165, 233, 0.2);
+      border: 1px solid rgba(100, 116, 139, 0.2);
       padding: 12px;
       box-sizing: border-box;
       display: grid;
@@ -137,20 +139,6 @@ export class MbTaskboardElement extends LitElement {
     .btn-primary:hover {
       background: #0369a1;
     }
-    .btn-ghost {
-      background: transparent;
-      border: 1px solid rgba(14, 165, 233, 0.4);
-      color: #0369a1;
-      border-radius: 8px;
-      padding: 4px 8px;
-      font-size: 0.75rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-ghost:hover {
-      background: rgba(255, 255, 255, 0.5);
-      border-color: #0369a1;
-    }
     .columns {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -165,12 +153,38 @@ export class MbTaskboardElement extends LitElement {
       display: flex;
       flex-direction: column;
       min-height: 0;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
+    /* Backlog — slate/gray */
+    .column-backlog {
+      background: rgba(248, 250, 252, 0.7);
+      border-color: rgba(100, 116, 139, 0.25);
+    }
+    .column-backlog h4 { color: #475569; }
+    /* In Progress — amber */
+    .column-in-progress {
+      background: rgba(255, 251, 235, 0.75);
+      border-color: rgba(217, 119, 6, 0.3);
+    }
+    .column-in-progress h4 { color: #b45309; }
+    /* Done — green */
+    .column-done {
+      background: rgba(240, 253, 244, 0.75);
+      border-color: rgba(21, 128, 61, 0.25);
+    }
+    .column-done h4 { color: #15803d; }
+    /* Drag-over highlight */
+    .column--drag-over {
+      box-shadow: inset 0 0 0 2px currentColor;
+      opacity: 0.9;
+    }
+    .column-backlog.column--drag-over  { box-shadow: inset 0 0 0 2px #64748b; background: rgba(226,232,240,0.6); }
+    .column-in-progress.column--drag-over { box-shadow: inset 0 0 0 2px #d97706; background: rgba(253,230,138,0.5); }
+    .column-done.column--drag-over     { box-shadow: inset 0 0 0 2px #16a34a; background: rgba(187,247,208,0.5); }
     .column h4 {
       margin: 0 0 6px 0;
       font-size: 0.72rem;
       text-transform: uppercase;
-      color: #0369a1;
       letter-spacing: 0.08em;
       font-weight: 800;
       text-align: center;
@@ -197,11 +211,16 @@ export class MbTaskboardElement extends LitElement {
       display: grid;
       gap: 4px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
-      transition: transform 0.1s;
+      transition: transform 0.1s, opacity 0.1s, box-shadow 0.1s;
+      cursor: grab;
     }
     .task:hover {
       transform: translateY(-1px);
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    .task--dragging {
+      opacity: 0.4;
+      cursor: grabbing;
     }
     .task-main {
       font-size: 0.85rem;
@@ -244,6 +263,26 @@ export class MbTaskboardElement extends LitElement {
       border-top: 1px solid #f1f5f9;
       padding-top: 6px;
     }
+    .icon-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      padding: 0;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+    .icon-btn svg { display: block; }
+    .icon-btn.btn-back:hover  { background: #f1f5f9; border-color: #cbd5e1; color: #475569; }
+    .icon-btn.btn-next:hover  { background: #eff6ff; border-color: #93c5fd; color: #2563eb; }
+    .icon-btn.btn-delete:hover { background: #fff1f2; border-color: #fca5a5; color: #dc2626; }
+    .icon-btn.btn-delete { margin-left: auto; }
     .settings-row {
       font-size: 0.75rem;
       color: #0369a1;
@@ -458,6 +497,43 @@ export class MbTaskboardElement extends LitElement {
     this.requestUpdate();
   };
 
+  private handleDragStart(taskId: string, event: DragEvent): void {
+    this.draggedTaskId = taskId;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', taskId);
+    }
+  }
+
+  private handleDragEnd(): void {
+    this.draggedTaskId = null;
+    this.dragOverColumn = null;
+  }
+
+  private handleDragOver(status: TaskStatus, event: DragEvent): void {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    if (this.dragOverColumn !== status) this.dragOverColumn = status;
+  }
+
+  private handleDragLeave(status: TaskStatus, event: DragEvent): void {
+    const related = event.relatedTarget as Node | null;
+    const section = (event.currentTarget as HTMLElement);
+    if (!section.contains(related)) {
+      if (this.dragOverColumn === status) this.dragOverColumn = null;
+    }
+  }
+
+  private handleDrop(status: TaskStatus, event: DragEvent): void {
+    event.preventDefault();
+    const id = this.draggedTaskId ?? event.dataTransfer?.getData('text/plain');
+    if (!id) return;
+    const task = this.tasks.find((t) => t.id === id);
+    if (task) this.moveTask(task, status);
+    this.draggedTaskId = null;
+    this.dragOverColumn = null;
+  }
+
   private renderColumn(status: TaskStatus, title: string) {
     const tasks = this.tasks.filter((task) => {
       if (status !== task.status) return false;
@@ -465,8 +541,15 @@ export class MbTaskboardElement extends LitElement {
       return true;
     });
 
+    const isDragOver = this.dragOverColumn === status;
+
     return html`
-      <section class="column">
+      <section
+        class="column column-${status} ${isDragOver ? 'column--drag-over' : ''}"
+        @dragover=${(e: DragEvent) => this.handleDragOver(status, e)}
+        @dragleave=${(e: DragEvent) => this.handleDragLeave(status, e)}
+        @drop=${(e: DragEvent) => this.handleDrop(status, e)}
+      >
         <h4>${title}</h4>
         <div class="list">
           ${tasks.map((task) => {
@@ -482,8 +565,14 @@ export class MbTaskboardElement extends LitElement {
               'in-progress': 'done',
               done: 'done',
             };
+            const isDragging = this.draggedTaskId === task.id;
             return html`
-              <article class="task">
+              <article
+                class="task ${isDragging ? 'task--dragging' : ''}"
+                draggable="true"
+                @dragstart=${(e: DragEvent) => this.handleDragStart(task.id, e)}
+                @dragend=${() => this.handleDragEnd()}
+              >
                 <div class="task-main">${task.title}</div>
                 <div class="task-meta">
                   <span class="priority-pill ${task.priority}"
@@ -494,27 +583,34 @@ export class MbTaskboardElement extends LitElement {
                 <div class="task-actions">
                   ${canMoveBack
                     ? html`<button
-                        class="btn-ghost"
-                        @click=${() =>
-                          this.moveTask(task, previousStatus[status])}
+                        class="icon-btn btn-back"
+                        title="Move back"
+                        @click=${() => this.moveTask(task, previousStatus[status])}
                       >
-                        Back
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M10 3L5 8l5 5"/>
+                        </svg>
                       </button>`
                     : null}
                   ${canMoveForward
                     ? html`<button
-                        class="btn-ghost"
+                        class="icon-btn btn-next"
+                        title="Move forward"
                         @click=${() => this.moveTask(task, nextStatus[status])}
                       >
-                        Next
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M6 3l5 5-5 5"/>
+                        </svg>
                       </button>`
                     : null}
                   <button
-                    class="btn-ghost"
-                    style="margin-left:auto;color:#ef4444;border-color:rgba(239,68,68,0.2)"
+                    class="icon-btn btn-delete"
+                    title="Delete task"
                     @click=${() => this.deleteTask(task.id)}
                   >
-                    Delete
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 4h10M6 4V2h4v2M5 4l.5 9h5L11 4"/>
+                    </svg>
                   </button>
                 </div>
               </article>
