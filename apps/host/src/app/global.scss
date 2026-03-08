@@ -111,7 +111,7 @@ body {
 .slot__hdr {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 6px;
   min-height: 24px;
   padding-bottom: 6px;
@@ -724,6 +724,68 @@ button:disabled {
   }
 }
 
+/* Grid slot — placeholder for adding widgets */
+.grid-slot {
+  cursor: pointer;
+}
+
+.grid-slot__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.grid-slot:hover .grid-slot__inner {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.04);
+  color: var(--accent);
+}
+
+[data-theme='dark'] .grid-slot:hover .grid-slot__inner {
+  background: rgba(96, 165, 250, 0.06);
+}
+
+/* Placement mode: pulsing accent border */
+.grid-slot--placement .grid-slot__inner {
+  border-color: var(--accent);
+  animation: slot-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes slot-pulse {
+  0%, 100% { background: rgba(59, 130, 246, 0.02); }
+  50% { background: rgba(59, 130, 246, 0.08); }
+}
+
+/* Placement banner */
+.placement-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 20px;
+  margin-bottom: 8px;
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  color: var(--text);
+  animation: fadeIn 0.2s ease;
+}
+
+.placement-banner strong {
+  font-weight: 600;
+  color: var(--accent);
+}
+
 /* React Grid Layout */
 .rgl {
   height: 100%;
@@ -833,6 +895,45 @@ button:disabled {
 
 .rgl.rgl--editing .react-grid-item.react-draggable-dragging .slot__hdr {
   cursor: grabbing;
+}
+
+/* Widget card action buttons (settings, delete) */
+.slot__hdr-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.slot__action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.slot__action:hover {
+  background: var(--bg-secondary);
+  color: var(--text);
+  opacity: 1 !important;
+}
+
+.slot__action--delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.slot:hover .slot__action {
+  opacity: 0.45;
 }
 
 /* Resize handle */

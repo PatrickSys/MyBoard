@@ -83,8 +83,16 @@ export function useDashboardLayout(
   const handleLayoutChange = useCallback((current: unknown, allLayouts: unknown) => {
     const nextLayout =
       ((allLayouts as { lg?: SavedLayout } | undefined)?.lg ?? (current as SavedLayout));
-    setLayout(nextLayout);
+    // Filter out synthetic slot items so they never pollute the persisted layout
+    setLayout(nextLayout.filter((entry) => !entry.i.startsWith('__slot_')));
   }, []);
+
+  const addLayoutEntry = useCallback(
+    (widgetId: string, pos: { x: number; y: number }) => {
+      setLayout((prev) => [...prev, { i: widgetId, x: pos.x, y: pos.y, w: 2, h: 3 }]);
+    },
+    []
+  );
 
   const resetLayout = useCallback(() => {
     const fresh = buildDefaultLayout(pageWidgets);
@@ -95,6 +103,7 @@ export function useDashboardLayout(
   return {
     layout,
     handleLayoutChange,
+    addLayoutEntry,
     resetLayout,
   };
 }

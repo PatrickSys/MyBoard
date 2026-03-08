@@ -10,6 +10,7 @@ import 'react-resizable/css/styles.css';
 import SafeWidgetSlot from './SafeWidgetSlot';
 import DebugPanel from './DebugPanel';
 import WidgetMarketplace from './WidgetMarketplace';
+import WidgetPicker from './WidgetPicker';
 import WidgetSettingsPanel from './WidgetSettingsPanel';
 import DashboardHeader from './DashboardHeader';
 import AutomationStudio from './AutomationStudio';
@@ -24,6 +25,8 @@ import {
 } from '../lib/runtime-kernel-singleton';
 import { useWidgetCatalog } from '../hooks/useWidgetCatalog';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
+import { useGridSlots } from '../hooks/useGridSlots';
+import type { SlotPosition } from '../hooks/useGridSlots';
 import { useAutomationRuntime } from '../hooks/useAutomationRuntime';
 import { usePageStore } from '../hooks/usePageStore';
 
@@ -46,6 +49,23 @@ function manifestTrustedOrigin(url: string): string | undefined {
   }
 }
 
+type SavedLayout = { i: string; x: number; y: number; w: number; h: number }[];
+
+function reflowLayout(lgLayout: SavedLayout, targetCols: number): SavedLayout {
+  const sorted = [...lgLayout].sort((a, b) => (a.y * 100 + a.x) - (b.y * 100 + b.x));
+  const result: SavedLayout = [];
+  let curX = 0, curRowY = 0, curRowH = 0;
+  for (const item of sorted) {
+    const w = Math.min(item.w, targetCols);
+    if (curX + w > targetCols) { curX = 0; curRowY += curRowH; curRowH = 0; }
+    result.push({ ...item, x: curX, y: curRowY, w });
+    curRowH = Math.max(curRowH, item.h);
+    curX += w;
+    if (curX >= targetCols) { curX = 0; curRowY += curRowH; curRowH = 0; }
+  }
+  return result;
+}
+
 /**
  * Main dashboard container (Phase 2: OS Shell).
  *
@@ -62,9 +82,15 @@ export default function GridDashboard() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [devMode, setDevMode] = useState(false);
   const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isAutomationOpen, setIsAutomationOpen] = useState(false);
   const [isMonitorOpen, setIsMonitorOpen] = useState(false);
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
+  const [slotTarget, setSlotTarget] = useState<{ x: number; y: number } | null>(null);
+  const [pendingWidgetId, setPendingWidgetId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const publishedSettingsRef = useRef(new Map<string, string>());
 
   // --- Data & Logic Hooks ---
@@ -105,6 +131,12 @@ export default function GridDashboard() {
     [activePage.widgetIds]
   );
 
+  // Widgets installed+enabled but not yet on this page — shown in WidgetPicker
+  const addableWidgets = useMemo(
+    () => activeWidgets.filter((w) => !currentPageWidgetIds.has(w.id)),
+    [activeWidgets, currentPageWidgetIds]
+  );
+
   const handlePageLayoutChange = useCallback(
     (layout: { i: string; x: number; y: number; w: number; h: number }[]) => {
       updatePageLayout(activePageId, layout);
@@ -116,13 +148,16 @@ export default function GridDashboard() {
     resetPageLayout(activePageId, activeWidgets);
   }, [activePageId, activeWidgets, resetPageLayout]);
 
-  const { layout, handleLayoutChange, resetLayout } = useDashboardLayout(
+  const { layout, handleLayoutChange, addLayoutEntry, resetLayout } = useDashboardLayout(
     pageWidgets,
     activePage.layout,
     activePageId,
     handlePageLayoutChange,
     handlePageResetLayout
   );
+
+  const mdLayout = useMemo(() => reflowLayout(layout, 2), [layout]);
+  const smLayout = useMemo(() => reflowLayout(layout, 1), [layout]);
 
   // Initialize the automation execution engine
   useAutomationRuntime();
@@ -181,6 +216,13 @@ export default function GridDashboard() {
 
       if (isTyping) return;
 
+      // Escape clears placement mode (no modifier required)
+      if (e.key === 'Escape' && pendingWidgetId) {
+        e.preventDefault();
+        setPendingWidgetId(null);
+        return;
+      }
+
       if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (e.key === 'E') {
           e.preventDefault();
@@ -222,7 +264,7 @@ export default function GridDashboard() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [resetLayout, pages, activePageId, setActivePage]);
+  }, [resetLayout, pages, activePageId, setActivePage, pendingWidgetId]);
 
   // Register Host Bridge and push canonical settings into mounted widgets.
   useEffect(() => {
@@ -274,6 +316,9 @@ export default function GridDashboard() {
     }));
   }, [pageWidgets, layout]);
 
+  const showSlots = mounted && (isEditing || pageWidgets.length === 0) && !isResizing && !isDragging;
+  const slots = useGridSlots(layout, 4, showSlots);
+
   const gridClassName = isEditing ? 'rgl rgl--editing' : 'rgl';
 
   const selectedManifest = settingsWidgetId
@@ -324,6 +369,51 @@ export default function GridDashboard() {
     });
   };
 
+  // Mark as mounted so slot rendering only happens on the client (avoids SSR hydration mismatch)
+  useEffect(() => { setMounted(true); }, []);
+
+  // Clear placement state on page switch
+  useEffect(() => {
+    setPendingWidgetId(null);
+    setSlotTarget(null);
+  }, [activePageId]);
+
+  const handleSlotClick = useCallback(
+    (slot: SlotPosition) => {
+      if (pendingWidgetId) {
+        // Flow B: place pending widget from marketplace
+        addLayoutEntry(pendingWidgetId, { x: slot.x, y: slot.y });
+        addWidgetToPage(activePageId, pendingWidgetId);
+        setPendingWidgetId(null);
+      } else {
+        // Flow A: open picker, remember target position
+        setSlotTarget({ x: slot.x, y: slot.y });
+        setIsPickerOpen(true);
+      }
+    },
+    [pendingWidgetId, activePageId, addWidgetToPage, addLayoutEntry]
+  );
+
+  const handlePickerAdd = useCallback(
+    (widgetId: string) => {
+      if (slotTarget) {
+        addLayoutEntry(widgetId, slotTarget);
+      }
+      addWidgetToPage(activePageId, widgetId);
+      setSlotTarget(null);
+    },
+    [activePageId, addWidgetToPage, addLayoutEntry, slotTarget]
+  );
+
+  const handleMarketplaceAddToPage = useCallback(
+    (widgetId: string) => {
+      setIsMarketplaceOpen(false);
+      setIsEditing(true);
+      setPendingWidgetId(widgetId);
+    },
+    []
+  );
+
   return (
     <main className="wrap">
       <DashboardHeader
@@ -347,6 +437,13 @@ export default function GridDashboard() {
         onToggleDevMode={() => setDevMode((p) => !p)}
       />
 
+      {pendingWidgetId && (
+        <div className="placement-banner">
+          <span>Click a slot to place <strong>{manifestMap.get(pendingWidgetId)?.title ?? pendingWidgetId}</strong></span>
+          <button className="btn--ghost" onClick={() => setPendingWidgetId(null)}>Cancel</button>
+        </div>
+      )}
+
       <ResponsiveGridLayout
         className={gridClassName}
         breakpoints={GRID_BREAKPOINTS}
@@ -355,11 +452,15 @@ export default function GridDashboard() {
         isDraggable={isEditing && !isAutomationOpen}
         isResizable={isEditing && !isAutomationOpen}
         margin={[16, 16]}
-        layouts={{ lg: layout, md: layout, sm: layout }}
+        layouts={{ lg: layout, md: mdLayout, sm: smLayout }}
         onLayoutChange={handleLayoutChange}
+        onResizeStart={() => setIsResizing(true)}
+        onResizeStop={() => setIsResizing(false)}
+        onDragStart={() => setIsDragging(true)}
+        onDragStop={() => setIsDragging(false)}
         draggableHandle=".slot__hdr"
         compactType={null}
-        preventCollision={false}
+        preventCollision={true}
       >
         {items.map(({ widget, layout: itemLayout }) => (
           <div
@@ -384,7 +485,24 @@ export default function GridDashboard() {
               integrity={widget.integrity}
               trustedOrigin={manifestTrustedOrigin(widget.url)}
               devMode={devMode}
+              onSettings={widget.settingsSchema ? () => setSettingsWidgetId(widget.id) : undefined}
+              onDelete={() => removeWidgetFromPage(activePageId, widget.id)}
             />
+          </div>
+        ))}
+        {showSlots && slots.map((slot) => (
+          <div
+            key={slot.id}
+            className={`grid-item grid-slot${pendingWidgetId ? ' grid-slot--placement' : ''}`}
+            data-grid={{ i: slot.id, x: slot.x, y: slot.y, w: slot.w, h: slot.h }}
+            onClick={() => handleSlotClick(slot)}
+          >
+            <div className="grid-slot__inner">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span>{pendingWidgetId ? 'Place Here' : 'Add Widget'}</span>
+            </div>
           </div>
         ))}
       </ResponsiveGridLayout>
@@ -402,8 +520,16 @@ export default function GridDashboard() {
           widgetInstallStore.setEnabled(id, enabled)
         }
         onOpenSettings={(id) => setSettingsWidgetId(id)}
-        onAddToPage={handleAddToPage}
+        onAddToPage={handleMarketplaceAddToPage}
         onRemoveFromPage={handleRemoveFromPage}
+      />
+
+      <WidgetPicker
+        isOpen={isPickerOpen}
+        widgets={addableWidgets}
+        onClose={() => { setIsPickerOpen(false); setSlotTarget(null); }}
+        onAdd={handlePickerAdd}
+        onOpenMarketplace={() => { setIsPickerOpen(false); setIsMarketplaceOpen(true); }}
       />
 
       <WidgetSettingsPanel
