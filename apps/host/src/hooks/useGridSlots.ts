@@ -25,7 +25,8 @@ const MAX_SLOTS = 8;
 export function useGridSlots(
   layout: SavedLayout,
   columns: number,
-  isVisible: boolean
+  isVisible: boolean,
+  maxRows?: number
 ): SlotPosition[] {
   return useMemo(() => {
     if (!isVisible) return [];
@@ -65,7 +66,8 @@ export function useGridSlots(
 
     // Scan row by row, column by column. The slotOccupied set ensures
     // previously placed slots are not revisited even when y step is 1.
-    for (let y = 0; y <= maxY + DEFAULT_H && slots.length < MAX_SLOTS; y++) {
+    const rowLimit = maxRows !== undefined ? maxRows - DEFAULT_H : maxY + DEFAULT_H;
+    for (let y = 0; y <= rowLimit && slots.length < MAX_SLOTS; y++) {
       for (let x = 0; x < columns && slots.length < MAX_SLOTS; x++) {
         if (slotOccupied.has(`${x},${y}`)) continue;
 
@@ -85,12 +87,12 @@ export function useGridSlots(
       slots.push({
         id: '__slot_0',
         x: 0,
-        y: maxY,
+        y: maxRows !== undefined ? Math.min(maxY, maxRows - DEFAULT_H) : maxY,
         w: Math.min(2, columns),
         h: DEFAULT_H,
       });
     }
 
     return slots;
-  }, [layout, columns, isVisible]);
+  }, [layout, columns, isVisible, maxRows]);
 }

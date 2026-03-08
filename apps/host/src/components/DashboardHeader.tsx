@@ -22,6 +22,7 @@ type Props = {
   onOpenAutomation: () => void;
   onOpenMonitor: () => void;
   onToggleDevMode: () => void;
+  onOpenPageSettings: () => void;
 };
 
 /**
@@ -45,6 +46,7 @@ export default function DashboardHeader({
   onOpenAutomation,
   onOpenMonitor,
   onToggleDevMode,
+  onOpenPageSettings,
 }: Props) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -97,7 +99,6 @@ export default function DashboardHeader({
       <div className="topbar__content">
         <div className="topbar__brand">
           <h1 className="brand__title">MyBoard</h1>
-          <span className="brand__subtitle">Your modular productivity dashboard</span>
         </div>
         <div className="topbar__pages">
           {pages.map((page) => {
@@ -202,6 +203,13 @@ export default function DashboardHeader({
             title={isEditing ? 'Exit edit mode (Shift+E)' : 'Enter edit mode (Shift+E)'}
           >
             Edit Layout
+          </button>
+          <button
+            onClick={onOpenPageSettings}
+            className="btn--ghost"
+            title="Page settings"
+          >
+            Page Settings
           </button>
           <button
             onClick={onResetLayout}

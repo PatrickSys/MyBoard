@@ -13,6 +13,7 @@ import WidgetMarketplace from './WidgetMarketplace';
 import WidgetPicker from './WidgetPicker';
 import WidgetSettingsPanel from './WidgetSettingsPanel';
 import DashboardHeader from './DashboardHeader';
+import PageSettingsPanel from './PageSettingsPanel';
 import AutomationStudio from './AutomationStudio';
 import SystemMonitor from './SystemMonitor';
 import NotificationHub from './NotificationHub';
@@ -33,7 +34,7 @@ import { usePageStore } from '../hooks/usePageStore';
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const GRID_BREAKPOINTS = { lg: 1200, md: 900, sm: 0 } as const;
-const GRID_COLUMNS = { lg: 4, md: 2, sm: 1 } as const;
+const GRID_COLUMNS = { lg: 8, md: 4, sm: 1 } as const;
 
 function serializeSettings(settings: Record<string, unknown> | undefined): string {
   return JSON.stringify(settings ?? {});
@@ -79,6 +80,7 @@ function reflowLayout(lgLayout: SavedLayout, targetCols: number): SavedLayout {
 export default function GridDashboard() {
   // --- Local UI State ---
   const [isEditing, setIsEditing] = useState(false);
+  const [isPageSettingsOpen, setIsPageSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [devMode, setDevMode] = useState(false);
   const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
@@ -118,6 +120,9 @@ export default function GridDashboard() {
     removeWidgetFromPage,
     updatePageLayout,
     resetPageLayout,
+    setPageFixedHeight,
+    setPageTitleVisibility,
+    setWidgetTitle,
   } = pageStore;
 
   // Filter active widgets to those on the current page
@@ -148,7 +153,16 @@ export default function GridDashboard() {
     resetPageLayout(activePageId, activeWidgets);
   }, [activePageId, activeWidgets, resetPageLayout]);
 
-  const { layout, handleLayoutChange, addLayoutEntry, resetLayout } = useDashboardLayout(
+  const {
+    layout,
+    displayLayout,
+    handleLayoutChange,
+    addLayoutEntry,
+    resetLayout,
+    onDragStart,
+    onDrag,
+    onDragStop,
+  } = useDashboardLayout(
     pageWidgets,
     activePage.layout,
     activePageId,
@@ -156,8 +170,22 @@ export default function GridDashboard() {
     handlePageResetLayout
   );
 
-  const mdLayout = useMemo(() => reflowLayout(layout, 2), [layout]);
+  const mdLayout = useMemo(() => reflowLayout(layout, 4), [layout]);
   const smLayout = useMemo(() => reflowLayout(layout, 1), [layout]);
+
+  // Compute the maximum number of visible rows when fixedHeight is enabled.
+  // ROW_H + MARGIN_Y = 116px per row; CHROME_H accounts for topbar + wrap padding.
+  const [viewportRows, setViewportRows] = useState(8);
+  useEffect(() => {
+    const ROW_H = 100, MARGIN = 16, CHROME_H = 68;
+    const compute = () =>
+      Math.max(1, Math.floor((window.innerHeight - CHROME_H + MARGIN) / (ROW_H + MARGIN)));
+    setViewportRows(compute());
+    if (!activePage.fixedHeight) return;
+    const onResize = () => setViewportRows(compute());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [activePage.fixedHeight]);
 
   // Initialize the automation execution engine
   useAutomationRuntime();
@@ -317,7 +345,10 @@ export default function GridDashboard() {
   }, [pageWidgets, layout]);
 
   const showSlots = mounted && (isEditing || pageWidgets.length === 0) && !isResizing && !isDragging;
-  const slots = useGridSlots(layout, 4, showSlots);
+  const slots = useGridSlots(
+    layout, 8, showSlots,
+    activePage.fixedHeight ? viewportRows : undefined
+  );
 
   const gridClassName = isEditing ? 'rgl rgl--editing' : 'rgl';
 
@@ -376,6 +407,7 @@ export default function GridDashboard() {
   useEffect(() => {
     setPendingWidgetId(null);
     setSlotTarget(null);
+    setIsPageSettingsOpen(false);
   }, [activePageId]);
 
   const handleSlotClick = useCallback(
@@ -415,7 +447,7 @@ export default function GridDashboard() {
   );
 
   return (
-    <main className="wrap">
+    <main className={`wrap${activePage.fixedHeight ? ' wrap--fixed-height' : ''}`}>
       <DashboardHeader
         theme={theme}
         isEditing={isEditing}
@@ -435,7 +467,18 @@ export default function GridDashboard() {
         onOpenAutomation={() => setIsAutomationOpen(true)}
         onOpenMonitor={() => setIsMonitorOpen(true)}
         onToggleDevMode={() => setDevMode((p) => !p)}
+        onOpenPageSettings={() => setIsPageSettingsOpen(true)}
       />
+
+      {isPageSettingsOpen && (
+        <PageSettingsPanel
+          fixedHeight={activePage.fixedHeight}
+          titleVisibility={activePage.titleVisibility}
+          onToggleFixedHeight={() => setPageFixedHeight(activePageId, !activePage.fixedHeight)}
+          onSetTitleVisibility={(v) => setPageTitleVisibility(activePageId, v)}
+          onClose={() => setIsPageSettingsOpen(false)}
+        />
+      )}
 
       {pendingWidgetId && (
         <div className="placement-banner">
@@ -452,15 +495,22 @@ export default function GridDashboard() {
         isDraggable={isEditing && !isAutomationOpen}
         isResizable={isEditing && !isAutomationOpen}
         margin={[16, 16]}
-        layouts={{ lg: layout, md: mdLayout, sm: smLayout }}
+        layouts={{ lg: displayLayout, md: mdLayout, sm: smLayout }}
+        maxRows={activePage.fixedHeight ? viewportRows : undefined}
         onLayoutChange={handleLayoutChange}
         onResizeStart={() => setIsResizing(true)}
         onResizeStop={() => setIsResizing(false)}
-        onDragStart={() => setIsDragging(true)}
-        onDragStop={() => setIsDragging(false)}
-        draggableHandle=".slot__hdr"
+        onDragStart={(l: SavedLayout, oldItem: SavedLayout[number]) => {
+          setIsDragging(true);
+          onDragStart(l, oldItem);
+        }}
+        onDrag={onDrag}
+        onDragStop={(l: SavedLayout, oldItem: SavedLayout[number], newItem: SavedLayout[number]) => {
+          setIsDragging(false);
+          onDragStop(l, oldItem, newItem);
+        }}
+        draggableHandle=".slot"
         compactType={null}
-        preventCollision={true}
       >
         {items.map(({ widget, layout: itemLayout }) => (
           <div
@@ -479,14 +529,17 @@ export default function GridDashboard() {
           >
             <SafeWidgetSlot
               id={widget.id}
-              title={widget.title}
+              title={activePage.widgetTitles?.[widget.id] ?? widget.title}
               tag={widget.tag}
               url={widget.url}
               integrity={widget.integrity}
               trustedOrigin={manifestTrustedOrigin(widget.url)}
               devMode={devMode}
+              titleVisibility={activePage.titleVisibility}
+              isEditing={isEditing}
               onSettings={widget.settingsSchema ? () => setSettingsWidgetId(widget.id) : undefined}
               onDelete={() => removeWidgetFromPage(activePageId, widget.id)}
+              onRenameTitle={isEditing ? (t) => setWidgetTitle(activePageId, widget.id, t) : undefined}
             />
           </div>
         ))}

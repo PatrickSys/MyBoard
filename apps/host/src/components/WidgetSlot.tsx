@@ -14,15 +14,41 @@ type Props = {
   trustedOrigin?: string;
   title?: string;
   devMode?: boolean;
+  titleVisibility?: 'always' | 'hover' | 'hidden';
+  isEditing?: boolean;
   onSettings?: () => void;
   onDelete?: () => void;
+  onRenameTitle?: (title: string) => void;
 };
 
-export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, title, devMode, onSettings, onDelete }: Props) {
+export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, title, devMode, titleVisibility = 'always', isEditing = false, onSettings, onDelete, onRenameTitle }: Props) {
   const hostRef = useRef<HTMLElement | null>(null);
   const [status, setStatus] = useState<SlotStatus>('loading');
   const [failReason, setFailReason] = useState<string | undefined>(undefined);
   const [retryCount, setRetryCount] = useState(0);
+  const [isTitleEditing, setIsTitleEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isTitleEditing) {
+      titleInputRef.current?.focus();
+      titleInputRef.current?.select();
+    }
+  }, [isTitleEditing]);
+
+  const handleTitleDoubleClick = () => {
+    if (!isEditing || !onRenameTitle) return;
+    setTitleDraft(title ?? tag);
+    setIsTitleEditing(true);
+  };
+
+  const commitTitleRename = () => {
+    if (titleDraft.trim() && onRenameTitle) {
+      onRenameTitle(titleDraft.trim());
+    }
+    setIsTitleEditing(false);
+  };
 
   const loadWidget = useCallback(() => {
     let cancelled = false;
@@ -101,10 +127,41 @@ export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, tit
   const loadTime = performanceTracker.getMetrics(id)?.loadDuration;
   const showLoadTime = devMode && status === 'ready' && loadTime;
 
+  const titleModifier = isEditing
+    ? ''
+    : titleVisibility === 'hover'
+    ? ' slot--title-hover'
+    : titleVisibility === 'hidden'
+    ? ' slot--title-hidden'
+    : '';
+
   return (
-    <div className="slot">
+    <div className={`slot${titleModifier}`}>
       <div className="slot__hdr">
-        <span className="slot__title">{title ?? tag}</span>
+        {isTitleEditing ? (
+          <input
+            ref={titleInputRef}
+            className="slot__title-input"
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={commitTitleRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); commitTitleRename(); }
+              if (e.key === 'Escape') setIsTitleEditing(false);
+              e.stopPropagation();
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span
+            className={`slot__title${isEditing && onRenameTitle ? ' slot__title--editable' : ''}`}
+            onDoubleClick={handleTitleDoubleClick}
+            title={isEditing && onRenameTitle ? 'Double-click to rename' : undefined}
+          >
+            {title ?? tag}
+          </span>
+        )}
         <div className="slot__hdr-right">
           {(devMode || status !== 'ready') && (
             <span
@@ -117,10 +174,11 @@ export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, tit
               {showLoadTime && ` (${loadTime.toFixed(0)}ms)`}
             </span>
           )}
-          {onSettings && (
+          {isEditing && onSettings && (
             <button
               className="slot__action"
               onClick={(e) => { e.stopPropagation(); onSettings(); }}
+              onMouseDown={(e) => e.stopPropagation()}
               aria-label="Widget settings"
               title="Settings"
             >
@@ -130,10 +188,11 @@ export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, tit
               </svg>
             </button>
           )}
-          {onDelete && (
+          {isEditing && onDelete && (
             <button
               className="slot__action slot__action--delete"
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              onMouseDown={(e) => e.stopPropagation()}
               aria-label="Remove widget"
               title="Remove from page"
             >

@@ -10,6 +10,11 @@ interface PageState {
   name: string;
   widgetIds: string[];
   layout: SavedLayout;
+  /** Per-widget title overrides (keyed by widget id). */
+  widgetTitles: Record<string, string>;
+  /** When true the grid does not scroll; row count is capped to viewport height. */
+  fixedHeight: boolean;
+  titleVisibility: 'always' | 'hover' | 'hidden';
   createdAt: string;
   updatedAt: string;
 }
@@ -45,6 +50,9 @@ function createPage(name: string, widgetIds: string[] = [], layout: SavedLayout 
     name,
     widgetIds,
     layout,
+    widgetTitles: {},
+    fixedHeight: false,
+    titleVisibility: 'always',
     createdAt: now,
     updatedAt: now,
   };
@@ -55,7 +63,17 @@ function loadStore(installedRecords: ReadonlyArray<WidgetInstallRecord>): PageSt
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as PageStoreState;
-      if (parsed.version === 1 && parsed.pages.length > 0) return parsed;
+      if (parsed.version === 1 && parsed.pages.length > 0) {
+      // Back-fill fixedHeight for pages that predate this field.
+      // Spread order: default first so an already-stored value wins.
+      const pages = (parsed.pages as Partial<PageState>[]).map((p): PageState => ({
+        ...p as PageState,
+        widgetTitles: p.widgetTitles ?? {},
+        fixedHeight: p.fixedHeight ?? false,
+        titleVisibility: p.titleVisibility ?? 'always',
+      }));
+      return { ...parsed, pages };
+    }
     }
   } catch {
     // fall through to migration
@@ -92,13 +110,32 @@ function persist(state: PageStoreState) {
   }
 }
 
-export function usePageStore(installedRecords: ReadonlyArray<WidgetInstallRecord>) {
-  const [state, setState] = useState<PageStoreState>(() => loadStore(installedRecords));
+/** Server-safe initial state: single empty page, consistent between SSR and CSR hydration. */
+function getInitialState(): PageStoreState {
+  const page = createPage('Main', [], []);
+  page.id = 'page_default';
+  return { version: 1, activePageId: page.id, pages: [page] };
+}
 
-  // Persist on every state change
+export function usePageStore(installedRecords: ReadonlyArray<WidgetInstallRecord>) {
+  // Initialize with a stable server-safe default to avoid SSR/CSR hydration mismatch.
+  // localStorage is loaded after mount via useEffect.
+  const [state, setState] = useState<PageStoreState>(getInitialState);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Hydrate from localStorage after mount
   useEffect(() => {
-    persist(state);
-  }, [state]);
+    setState(loadStore(installedRecords));
+    setHydrated(true);
+  // Run once on mount; installedRecords intentionally excluded to avoid re-loading on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist on every state change, but only after hydration to avoid overwriting saved data
+  // with the blank initial state.
+  useEffect(() => {
+    if (hydrated) persist(state);
+  }, [state, hydrated]);
 
   // Prune stale widget IDs when widgets are globally uninstalled
   useEffect(() => {
@@ -201,6 +238,46 @@ export function usePageStore(installedRecords: ReadonlyArray<WidgetInstallRecord
     }));
   }, []);
 
+  const setPageFixedHeight = useCallback((pageId: PageId, value: boolean) => {
+    setState((prev) => ({
+      ...prev,
+      pages: prev.pages.map((p) =>
+        p.id === pageId
+          ? { ...p, fixedHeight: value, updatedAt: new Date().toISOString() }
+          : p
+      ),
+    }));
+  }, []);
+
+  const setPageTitleVisibility = useCallback(
+    (pageId: PageId, visibility: 'always' | 'hover' | 'hidden') => {
+      setState((prev) => ({
+        ...prev,
+        pages: prev.pages.map((p) =>
+          p.id === pageId
+            ? { ...p, titleVisibility: visibility, updatedAt: new Date().toISOString() }
+            : p
+        ),
+      }));
+    },
+    []
+  );
+
+  const setWidgetTitle = useCallback((pageId: PageId, widgetId: string, title: string) => {
+    setState((prev) => ({
+      ...prev,
+      pages: prev.pages.map((p) =>
+        p.id === pageId
+          ? {
+              ...p,
+              widgetTitles: { ...p.widgetTitles, [widgetId]: title },
+              updatedAt: new Date().toISOString(),
+            }
+          : p
+      ),
+    }));
+  }, []);
+
   const resetPageLayout = useCallback(
     (pageId: PageId, manifests: ReadonlyArray<WidgetManifest>) => {
       setState((prev) => ({
@@ -231,5 +308,8 @@ export function usePageStore(installedRecords: ReadonlyArray<WidgetInstallRecord
     removeWidgetFromPage,
     updatePageLayout,
     resetPageLayout,
+    setPageFixedHeight,
+    setPageTitleVisibility,
+    setWidgetTitle,
   };
 }
