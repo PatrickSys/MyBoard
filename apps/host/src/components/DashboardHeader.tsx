@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import styles from './DashboardHeader.module.scss';
 
 type PageInfo = {
   id: string;
@@ -23,6 +24,7 @@ type Props = {
   onOpenMonitor: () => void;
   onToggleDevMode: () => void;
   onOpenPageSettings: () => void;
+  onOpenCommandPalette: () => void;
 };
 
 /**
@@ -47,6 +49,7 @@ export default function DashboardHeader({
   onOpenMonitor,
   onToggleDevMode,
   onOpenPageSettings,
+  onOpenCommandPalette,
 }: Props) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -70,6 +73,19 @@ export default function DashboardHeader({
       renameInputRef.current?.select();
     }
   }, [renamingId]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { pageId } = (e as CustomEvent<{ pageId: string }>).detail;
+      const page = pages.find((p) => p.id === pageId);
+      if (page) {
+        setRenamingId(pageId);
+        setRenameValue(page.name);
+      }
+    };
+    window.addEventListener('myboard:start-page-rename', handler);
+    return () => window.removeEventListener('myboard:start-page-rename', handler);
+  }, [pages]);
 
   const commitRename = () => {
     if (renamingId && renameValue.trim()) {
@@ -152,6 +168,13 @@ export default function DashboardHeader({
           </button>
         </div>
         <div className="topbar__actions">
+          <button
+            className={styles.kbdChip}
+            onClick={onOpenCommandPalette}
+            title="Command palette (Ctrl+K)"
+          >
+            <span>&#8984;K</span>
+          </button>
           <button
             onClick={onToggleTheme}
             className="btn--ghost btn--icon"
@@ -236,6 +259,7 @@ export default function DashboardHeader({
             </button>
             {showShortcuts && (
               <div className="shortcuts-popover">
+                <div className="shortcuts-row"><kbd>Ctrl+K</kbd><span>Command palette</span></div>
                 <div className="shortcuts-row"><kbd>Shift+E</kbd><span>Edit Layout</span></div>
                 <div className="shortcuts-row"><kbd>Shift+M</kbd><span>Marketplace</span></div>
                 <div className="shortcuts-row"><kbd>Shift+D</kbd><span>Dev Mode</span></div>
