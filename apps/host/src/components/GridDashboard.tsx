@@ -16,6 +16,7 @@ import PageSettingsPanel from './PageSettingsPanel';
 import AutomationStudio from './AutomationStudio';
 import Monitor from './Monitor';
 import NotificationHub from './NotificationHub';
+import CommandPalette from './CommandPalette';
 
 import { widgetInstallStore } from '../lib/widget-install-store';
 import { canRequestCapability } from '../lib/widget-policy';
@@ -29,6 +30,7 @@ import { useGridSlots } from '../hooks/useGridSlots';
 import type { SlotPosition } from '../hooks/useGridSlots';
 import { useAutomationRuntime } from '../hooks/useAutomationRuntime';
 import { usePageStore } from '../hooks/usePageStore';
+import { useCommandRegistry } from '../hooks/useCommandRegistry';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -86,6 +88,7 @@ export default function GridDashboard() {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isAutomationOpen, setIsAutomationOpen] = useState(false);
   const [isMonitorOpen, setIsMonitorOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
   const [slotTarget, setSlotTarget] = useState<{ x: number; y: number } | null>(null);
   const [pendingWidgetId, setPendingWidgetId] = useState<string | null>(null);
@@ -140,6 +143,29 @@ export default function GridDashboard() {
     () => activeWidgets.filter((w) => !currentPageWidgetIds.has(w.id)),
     [activeWidgets, currentPageWidgetIds]
   );
+
+  const commands = useCommandRegistry({
+    pages,
+    activePageId,
+    activePage,
+    activeWidgets,
+    isEditing,
+    devMode,
+    setActivePage,
+    createPage,
+    deletePage,
+    addWidgetToPage,
+    removeWidgetFromPage,
+    resetPageLayout,
+    setPageFixedHeight,
+    onToggleEdit: () => setIsEditing((p) => !p),
+    onToggleDevMode: () => setDevMode((p) => !p),
+    onOpenMarketplace: () => setIsMarketplaceOpen(true),
+    onOpenPageSettings: () => setIsPageSettingsOpen(true),
+    onOpenAutomation: () => setIsAutomationOpen(true),
+    onOpenMonitor: () => setIsMonitorOpen(true),
+    onClose: () => setIsCommandPaletteOpen(false),
+  });
 
   const handlePageLayoutChange = useCallback(
     (layout: { i: string; x: number; y: number; w: number; h: number }[]) => {
@@ -234,6 +260,13 @@ export default function GridDashboard() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+K / Cmd+K opens command palette regardless of focus context
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+
       const target = e.target as HTMLElement;
       const isTyping =
         target.tagName === 'INPUT' ||
@@ -256,6 +289,7 @@ export default function GridDashboard() {
         setDevMode((p) => !p);
       }
 
+
       if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (e.key === 'E') {
           e.preventDefault();
@@ -276,6 +310,17 @@ export default function GridDashboard() {
         if (e.key === 'D') {
           e.preventDefault();
           setIsMonitorOpen((p) => !p);
+        }
+        // Page navigation: Shift+[ (previous) and Shift+] (next)
+        if (e.key === '{') {
+          e.preventDefault();
+          const idx = pages.findIndex((p) => p.id === activePageId);
+          if (idx > 0) setActivePage(pages[idx - 1].id);
+        }
+        if (e.key === '}') {
+          e.preventDefault();
+          const idx = pages.findIndex((p) => p.id === activePageId);
+          if (idx < pages.length - 1) setActivePage(pages[idx + 1].id);
         }
         // Page navigation: Shift+[ (previous) and Shift+] (next)
         if (e.key === '{') {
@@ -469,6 +514,7 @@ export default function GridDashboard() {
         onOpenMonitor={() => setIsMonitorOpen(true)}
         onToggleDevMode={() => setDevMode((p) => !p)}
         onOpenPageSettings={() => setIsPageSettingsOpen(true)}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
       />
 
       {isPageSettingsOpen && (
@@ -608,6 +654,12 @@ export default function GridDashboard() {
           onClose={() => setIsMonitorOpen(false)}
         />
       )}
+
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        commands={commands}
+        onClose={() => setIsCommandPaletteOpen(false)}
+      />
 
       <NotificationHub />
     </main>
