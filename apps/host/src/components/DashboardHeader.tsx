@@ -1,10 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FEATURE_FLAGS } from '../config/feature-flags';
+
+type PageInfo = {
+  id: string;
+  name: string;
+};
 
 type Props = {
   theme: 'light' | 'dark';
   isEditing: boolean;
   devMode: boolean;
+  pages: ReadonlyArray<PageInfo>;
+  activePageId: string;
+  onSelectPage: (id: string) => void;
+  onCreatePage: (name: string) => void;
+  onRenamePage: (id: string, name: string) => void;
+  onDeletePage: (id: string) => void;
   onToggleTheme: () => void;
   onToggleEdit: () => void;
   onResetLayout: () => void;
@@ -12,16 +22,23 @@ type Props = {
   onOpenAutomation: () => void;
   onOpenMonitor: () => void;
   onToggleDevMode: () => void;
+  onOpenPageSettings: () => void;
 };
 
 /**
  * Top navigation bar for the dashboard.
- * Contains branding, mode switch, and global actions.
+ * Contains branding, page tabs, and global actions.
  */
 export default function DashboardHeader({
   theme,
   isEditing,
   devMode,
+  pages,
+  activePageId,
+  onSelectPage,
+  onCreatePage,
+  onRenamePage,
+  onDeletePage,
   onToggleTheme,
   onToggleEdit,
   onResetLayout,
@@ -29,9 +46,13 @@ export default function DashboardHeader({
   onOpenAutomation,
   onOpenMonitor,
   onToggleDevMode,
+  onOpenPageSettings,
 }: Props) {
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
   const popoverRef = useRef<HTMLDivElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
@@ -43,12 +64,92 @@ export default function DashboardHeader({
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, []);
 
+  useEffect(() => {
+    if (renamingId) {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    }
+  }, [renamingId]);
+
+  const commitRename = () => {
+    if (renamingId && renameValue.trim()) {
+      onRenamePage(renamingId, renameValue.trim());
+    }
+    setRenamingId(null);
+  };
+
+  const handleDoubleClick = (page: PageInfo) => {
+    setRenamingId(page.id);
+    setRenameValue(page.name);
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (pages.length <= 1) return;
+    const confirmed = window.confirm(`Delete page "${name}"?`);
+    if (confirmed) onDeletePage(id);
+  };
+
+  const handleCreate = () => {
+    const idx = pages.length + 1;
+    onCreatePage(`Page ${idx}`);
+  };
+
   return (
     <div className="topbar">
       <div className="topbar__content">
         <div className="topbar__brand">
           <h1 className="brand__title">MyBoard</h1>
-          <span className="brand__subtitle">Your modular productivity dashboard</span>
+        </div>
+        <div className="topbar__pages">
+          {pages.map((page) => {
+            const isActive = page.id === activePageId;
+            if (renamingId === page.id) {
+              return (
+                <input
+                  key={page.id}
+                  ref={renameInputRef}
+                  className="page-tab__input"
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={commitRename}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitRename();
+                    if (e.key === 'Escape') setRenamingId(null);
+                  }}
+                />
+              );
+            }
+            return (
+              <div key={page.id} className="page-tab-wrap">
+                <button
+                  className={`page-tab ${isActive ? 'page-tab--active' : ''}`}
+                  onClick={() => onSelectPage(page.id)}
+                  onDoubleClick={() => handleDoubleClick(page)}
+                  title={`Switch to "${page.name}" (double-click to rename)`}
+                >
+                  {page.name}
+                </button>
+                {pages.length > 1 && (
+                  <button
+                    className="page-tab__delete"
+                    onClick={() => handleDelete(page.id, page.name)}
+                    aria-label={`Delete page ${page.name}`}
+                    title={`Delete "${page.name}"`}
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          <button
+            className="page-tab__add"
+            onClick={handleCreate}
+            title="Create new page"
+            aria-label="Create new page"
+          >
+            +
+          </button>
         </div>
         <div className="topbar__actions">
           <button
@@ -104,6 +205,13 @@ export default function DashboardHeader({
             Edit Layout
           </button>
           <button
+            onClick={onOpenPageSettings}
+            className="btn--ghost"
+            title="Page settings"
+          >
+            Page Settings
+          </button>
+          <button
             onClick={onResetLayout}
             className="btn--ghost"
             title="Reset layout (Shift+R)"
@@ -132,6 +240,8 @@ export default function DashboardHeader({
                 <div className="shortcuts-row"><kbd>Shift+M</kbd><span>Marketplace</span></div>
                 <div className="shortcuts-row"><kbd>Shift+D</kbd><span>Dev Mode</span></div>
                 <div className="shortcuts-row"><kbd>Shift+R</kbd><span>Reset Layout</span></div>
+                <div className="shortcuts-row"><kbd>Shift+[</kbd><span>Previous Page</span></div>
+                <div className="shortcuts-row"><kbd>Shift+]</kbd><span>Next Page</span></div>
                 {devMode && <div className="shortcuts-row"><kbd>Shift+A</kbd><span>Studio</span></div>}
                 {devMode && <div className="shortcuts-row"><kbd>Shift+Esc</kbd><span>Monitor</span></div>}
               </div>

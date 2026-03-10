@@ -14,13 +14,41 @@ type Props = {
   trustedOrigin?: string;
   title?: string;
   devMode?: boolean;
+  titleVisibility?: 'always' | 'hover' | 'hidden';
+  isEditing?: boolean;
+  onSettings?: () => void;
+  onDelete?: () => void;
+  onRenameTitle?: (title: string) => void;
 };
 
-export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, title, devMode }: Props) {
+export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, title, devMode, titleVisibility = 'always', isEditing = false, onSettings, onDelete, onRenameTitle }: Props) {
   const hostRef = useRef<HTMLElement | null>(null);
   const [status, setStatus] = useState<SlotStatus>('loading');
   const [failReason, setFailReason] = useState<string | undefined>(undefined);
   const [retryCount, setRetryCount] = useState(0);
+  const [isTitleEditing, setIsTitleEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isTitleEditing) {
+      titleInputRef.current?.focus();
+      titleInputRef.current?.select();
+    }
+  }, [isTitleEditing]);
+
+  const handleTitleDoubleClick = () => {
+    if (!isEditing || !onRenameTitle) return;
+    setTitleDraft(title ?? tag);
+    setIsTitleEditing(true);
+  };
+
+  const commitTitleRename = () => {
+    if (titleDraft.trim() && onRenameTitle) {
+      onRenameTitle(titleDraft.trim());
+    }
+    setIsTitleEditing(false);
+  };
 
   const loadWidget = useCallback(() => {
     let cancelled = false;
@@ -99,21 +127,84 @@ export default function WidgetSlot({ id, tag, url, integrity, trustedOrigin, tit
   const loadTime = performanceTracker.getMetrics(id)?.loadDuration;
   const showLoadTime = devMode && status === 'ready' && loadTime;
 
+  const titleModifier = isEditing
+    ? ''
+    : titleVisibility === 'hover'
+    ? ' slot--title-hover'
+    : titleVisibility === 'hidden'
+    ? ' slot--title-hidden'
+    : '';
+
   return (
-    <div className="slot">
+    <div className={`slot${titleModifier}`}>
       <div className="slot__hdr">
-        <span className="slot__title">{title ?? tag}</span>
-        {(devMode || status !== 'ready') && (
+        {isTitleEditing ? (
+          <input
+            ref={titleInputRef}
+            className="slot__title-input"
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={commitTitleRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); commitTitleRename(); }
+              if (e.key === 'Escape') setIsTitleEditing(false);
+              e.stopPropagation();
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          />
+        ) : (
           <span
-            className={`slot__badge slot__badge--${status}`}
-            aria-live="polite"
-            title={status === 'error' ? failReason : status}
+            className={`slot__title${isEditing && onRenameTitle ? ' slot__title--editable' : ''}`}
+            onDoubleClick={handleTitleDoubleClick}
+            title={isEditing && onRenameTitle ? 'Double-click to rename' : undefined}
           >
-            <span className="slot__dot" />
-            {status === 'error' ? (failReason ?? 'error') : status}
-            {showLoadTime && ` (${loadTime.toFixed(0)}ms)`}
+            {title ?? tag}
           </span>
         )}
+        <div className="slot__hdr-right">
+          {(devMode || status !== 'ready') && (
+            <span
+              className={`slot__badge slot__badge--${status}`}
+              aria-live="polite"
+              title={status === 'error' ? failReason : status}
+            >
+              <span className="slot__dot" />
+              {status === 'error' ? (failReason ?? 'error') : status}
+              {showLoadTime && ` (${loadTime.toFixed(0)}ms)`}
+            </span>
+          )}
+          {isEditing && onSettings && (
+            <button
+              className="slot__action"
+              onClick={(e) => { e.stopPropagation(); onSettings(); }}
+              onMouseDown={(e) => e.stopPropagation()}
+              aria-label="Widget settings"
+              title="Settings"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </button>
+          )}
+          {isEditing && onDelete && (
+            <button
+              className="slot__action slot__action--delete"
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              onMouseDown={(e) => e.stopPropagation()}
+              aria-label="Remove widget"
+              title="Remove from page"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4h6v2"/>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
       <div className="slot__body" data-status={status}>
         {status === 'loading' && <div className="slot__skeleton" />}

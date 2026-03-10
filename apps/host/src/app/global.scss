@@ -69,10 +69,21 @@ body {
 
 .wrap {
   margin: 0 auto;
-  padding: 8px 4px;
+  padding: 0;
   background: var(--bg);
   min-height: 100vh;
   transition: background-color 0.3s ease;
+}
+
+/* Fixed-height page mode: grid is capped to the viewport, no scrolling. */
+.wrap--fixed-height {
+  height: 100dvh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+.wrap--fixed-height .rgl {
+  overflow: hidden;
 }
 
 .title {
@@ -91,7 +102,7 @@ body {
 .slot {
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 0;
   background: var(--card);
   display: flex;
   flex-direction: column;
@@ -111,18 +122,54 @@ body {
 .slot__hdr {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-  min-height: 24px;
-  padding-bottom: 6px;
+  gap: 6px;
+  padding: 6px 10px;
+  min-height: 30px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+  position: relative;
+  z-index: 3;
+  background: var(--card);
+  border-radius: 12px 12px 0 0;
 }
 
 .slot__title {
   font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--text);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot__title--editable {
+  cursor: text;
+}
+
+.slot__title--editable:hover {
+  color: var(--text-secondary);
+}
+
+.slot__title-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 1px 6px;
+  outline: none;
 }
 
 .slot__badge {
@@ -433,7 +480,7 @@ button:disabled {
 .topbar {
   background: var(--card);
   border-bottom: 1px solid var(--border);
-  padding: 8px 0;
+  padding: 4px 0;
   box-shadow: var(--shadow-sm);
 }
 
@@ -507,10 +554,127 @@ button:disabled {
   margin: 0;
 }
 
+.topbar__pages {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  padding: 0 8px;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.page-tab-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.page-tab {
+  font-size: 0.8rem;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.page-tab:hover {
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--text);
+}
+
+.page-tab--active {
+  background: var(--accent);
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.page-tab--active:hover {
+  background: var(--accent-hover);
+  color: #ffffff !important;
+}
+
+.page-tab__input {
+  font-size: 0.8rem;
+  padding: 4px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  width: 100px;
+  font-family: inherit;
+}
+
+.page-tab__delete {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: 0.65rem;
+  line-height: 1;
+  border-radius: 50%;
+  background: var(--error);
+  color: #ffffff !important;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.page-tab__delete:hover {
+  background: #dc2626;
+  color: #ffffff !important;
+  transform: none;
+}
+
+.page-tab-wrap:hover .page-tab__delete {
+  opacity: 1;
+}
+
+.page-tab__add {
+  font-size: 0.85rem;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.page-tab__add:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .topbar__actions {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 /* Grid item */
@@ -530,7 +694,7 @@ button:disabled {
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .wrap {
-    padding: 20px 16px;
+    padding: 0;
   }
 
   .grid {
@@ -538,12 +702,8 @@ button:disabled {
     gap: 16px;
   }
 
-  .slot {
-    padding: 16px;
-  }
-
   .slot__title {
-    font-size: 1rem;
+    font-size: 0.75rem;
   }
 
   .slot__badge {
@@ -568,24 +728,11 @@ button:disabled {
 
 @media (max-width: 480px) {
   .wrap {
-    padding: 16px 12px;
-  }
-
-  .slot {
-    padding: 12px;
-  }
-
-  .slot__hdr {
-    min-height: 36px;
-    margin-bottom: 12px;
-  }
-
-  .slot__title {
-    font-size: 0.9rem;
+    padding: 0;
   }
 
   .topbar {
-    padding: 16px 0;
+    padding: 4px 0;
   }
 
   .topbar__content {
@@ -605,6 +752,119 @@ button:disabled {
     padding: 8px 12px;
     font-size: 0.8rem;
   }
+}
+
+/* Grid slot — placeholder for adding widgets */
+.grid-slot {
+  cursor: pointer;
+}
+
+.grid-slot__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.grid-slot:hover .grid-slot__inner {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.04);
+  color: var(--accent);
+}
+
+[data-theme='dark'] .grid-slot:hover .grid-slot__inner {
+  background: rgba(96, 165, 250, 0.06);
+}
+
+/* Placement mode: pulsing accent border */
+.grid-slot--placement .grid-slot__inner {
+  border-color: var(--accent);
+  animation: slot-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes slot-pulse {
+  0%, 100% { background: rgba(59, 130, 246, 0.02); }
+  50% { background: rgba(59, 130, 246, 0.08); }
+}
+
+/* Placement banner */
+.placement-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 20px;
+  margin-bottom: 8px;
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  color: var(--text);
+  animation: fadeIn 0.2s ease;
+}
+
+.placement-banner strong {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Page settings panel */
+.page-settings-panel {
+  max-width: 320px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  animation: fadeIn 0.15s ease;
+}
+
+.page-settings-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.page-settings-panel__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.page-settings-panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.page-settings-panel__label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.page-settings-panel__desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.page-settings-panel__segmented {
+  display: flex;
+  gap: 4px;
 }
 
 /* React Grid Layout */
@@ -693,15 +953,17 @@ button:disabled {
 }
 
 .react-grid-item.react-grid-item-placeholder {
-  background: rgba(59, 130, 246, 0.06);
-  border: 2px dashed rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.14);
+  border: 2px solid rgba(59, 130, 246, 0.4);
   border-radius: var(--radius);
   transition: all 0.2s ease;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.08), 0 0 0 4px rgba(59, 130, 246, 0.06);
 }
 
 [data-theme='dark'] .react-grid-item.react-grid-item-placeholder {
-  background: rgba(96, 165, 250, 0.06);
-  border-color: rgba(96, 165, 250, 0.2);
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.1), 0 0 0 4px rgba(96, 165, 250, 0.06);
 }
 
 /* Resizing state */
@@ -709,13 +971,85 @@ button:disabled {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1), 0 0 0 2px var(--accent);
 }
 
-/* Edit mode drag affordance */
-.rgl.rgl--editing .slot__hdr {
+/* Edit mode: entire widget is the drag handle */
+.rgl.rgl--editing .slot {
   cursor: grab;
 }
 
-.rgl.rgl--editing .react-grid-item.react-draggable-dragging .slot__hdr {
+.rgl.rgl--editing .react-grid-item.react-draggable-dragging .slot {
   cursor: grabbing;
+}
+
+/* Edit mode: overlay on body blocks widget interaction and enables full-card drag */
+.rgl.rgl--editing .slot__body::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: grab;
+  border-radius: 0 0 11px 11px;
+}
+
+.rgl.rgl--editing .react-grid-item.react-draggable-dragging .slot__body::after {
+  cursor: grabbing;
+}
+
+/* Action buttons sit above the overlay via pointer-events */
+.rgl.rgl--editing .slot__action {
+  pointer-events: auto;
+}
+
+/* Title visibility modifiers */
+.slot--title-hover .slot__hdr {
+  opacity: 0;
+}
+
+.slot--title-hover:hover .slot__hdr {
+  opacity: 1;
+}
+
+.slot--title-hidden .slot__hdr {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Edit mode always shows the footer bar regardless of visibility setting */
+.rgl--editing .slot__hdr {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Widget card action buttons (settings, delete) */
+.slot__hdr-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.slot__action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.slot__action:hover {
+  background: var(--bg-secondary);
+  color: var(--text);
+}
+
+.slot__action--delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 /* Resize handle */

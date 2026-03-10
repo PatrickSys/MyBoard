@@ -30,7 +30,9 @@ class ErrorBoundary extends Component<{ children: ReactNode; title: string }, St
         <div className="slot">
           <div className="slot__hdr">
             <span className="slot__title">{this.props.title}</span>
-            <span className="slot__badge slot__badge--error">crashed</span>
+            <div className="slot__hdr-right">
+              <span className="slot__badge slot__badge--error">crashed</span>
+            </div>
           </div>
           <div className="slot__body">
             <div className="slot__error">

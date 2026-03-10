@@ -4,7 +4,7 @@ import { FEATURE_FLAGS } from '../config/feature-flags';
 
 export type WidgetHealthView = {
   id: string;
-  status: 'healthy' | 'warning' | 'quarantined';
+  status: 'healthy' | 'warning' | 'disabled';
   crashCount: number;
   eps: number;
 };
@@ -37,7 +37,7 @@ export function useSystemHealth(
         const eps = widgetPoints[0]?.eventsPerSecond ?? globalEps;
         const status =
           health.state === 'quarantined'
-            ? 'quarantined'
+            ? 'disabled'
             : throttle.throttled
               ? 'warning'
               : 'healthy';
