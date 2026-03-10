@@ -49,7 +49,7 @@ myboard/
   apps/
     host/                     # Next.js dashboard app
       src/
-        components/           # Dashboard, WidgetSlot, DebugPanel
+        components/           # Dashboard, WidgetSlot, Monitor
         lib/                  # widget-loader, performance-tracker
       public/widgets/         # Built widget bundles
   packages/

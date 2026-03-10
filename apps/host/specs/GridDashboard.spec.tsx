@@ -50,10 +50,6 @@ jest.mock('../src/components/SafeWidgetSlot', () => ({
   __esModule: true,
   default: ({ title }: { title: string }) => <div>{title}</div>,
 }));
-jest.mock('../src/components/DebugPanel', () => ({
-  __esModule: true,
-  default: () => null,
-}));
 jest.mock('../src/components/DashboardHeader', () => ({
   __esModule: true,
   default: () => null,
@@ -62,7 +58,7 @@ jest.mock('../src/components/AutomationStudio', () => ({
   __esModule: true,
   default: () => null,
 }));
-jest.mock('../src/components/SystemMonitor', () => ({
+jest.mock('../src/components/Monitor', () => ({
   __esModule: true,
   default: () => null,
 }));

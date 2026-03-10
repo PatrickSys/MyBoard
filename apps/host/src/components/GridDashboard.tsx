@@ -8,14 +8,13 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
 import SafeWidgetSlot from './SafeWidgetSlot';
-import DebugPanel from './DebugPanel';
 import WidgetMarketplace from './WidgetMarketplace';
 import WidgetPicker from './WidgetPicker';
 import WidgetSettingsPanel from './WidgetSettingsPanel';
 import DashboardHeader from './DashboardHeader';
 import PageSettingsPanel from './PageSettingsPanel';
 import AutomationStudio from './AutomationStudio';
-import SystemMonitor from './SystemMonitor';
+import Monitor from './Monitor';
 import NotificationHub from './NotificationHub';
 
 import { widgetInstallStore } from '../lib/widget-install-store';
@@ -251,6 +250,12 @@ export default function GridDashboard() {
         return;
       }
 
+      // Backtick toggles devMode (no modifier required)
+      if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === '`') {
+        e.preventDefault();
+        setDevMode((p) => !p);
+      }
+
       if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (e.key === 'E') {
           e.preventDefault();
@@ -268,13 +273,9 @@ export default function GridDashboard() {
           e.preventDefault();
           setIsAutomationOpen((p) => !p);
         }
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          setIsMonitorOpen((p) => !p);
-        }
         if (e.key === 'D') {
           e.preventDefault();
-          setDevMode((p) => !p);
+          setIsMonitorOpen((p) => !p);
         }
         // Page navigation: Shift+[ (previous) and Shift+] (next)
         if (e.key === '{') {
@@ -601,7 +602,7 @@ export default function GridDashboard() {
       )}
 
       {devMode && (
-        <SystemMonitor
+        <Monitor
           isOpen={isMonitorOpen}
           activeWidgets={activeWidgets}
           onClose={() => setIsMonitorOpen(false)}
@@ -609,8 +610,6 @@ export default function GridDashboard() {
       )}
 
       <NotificationHub />
-
-      {devMode && <DebugPanel />}
     </main>
   );
 }
