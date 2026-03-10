@@ -256,6 +256,7 @@ export default function GridDashboard() {
         setDevMode((p) => !p);
       }
 
+
       if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (e.key === 'E') {
           e.preventDefault();
@@ -276,6 +277,17 @@ export default function GridDashboard() {
         if (e.key === 'D') {
           e.preventDefault();
           setIsMonitorOpen((p) => !p);
+        }
+        // Page navigation: Shift+[ (previous) and Shift+] (next)
+        if (e.key === '{') {
+          e.preventDefault();
+          const idx = pages.findIndex((p) => p.id === activePageId);
+          if (idx > 0) setActivePage(pages[idx - 1].id);
+        }
+        if (e.key === '}') {
+          e.preventDefault();
+          const idx = pages.findIndex((p) => p.id === activePageId);
+          if (idx < pages.length - 1) setActivePage(pages[idx + 1].id);
         }
         // Page navigation: Shift+[ (previous) and Shift+] (next)
         if (e.key === '{') {
